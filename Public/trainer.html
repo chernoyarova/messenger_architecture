@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тренажёр · Архитектура мессенджера</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0e14; --bg2:#10151f; --panel:#131927; --line:#26304a; --line2:#1b2335;
+    --ink:#e9eef8; --muted:#94a2bd; --muted2:#6b7790;
+    --client:#f4c95d; --edge:#5ec8f2; --core:#8b9bff; --store:#5ad19a; --scale:#ff944d; --push:#cf91f5; --rtc:#ff6f91;
+    --good:#5ad19a; --bad:#ff6f91;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Archivo',system-ui,sans-serif;
+    background-image:linear-gradient(var(--line2) 1px,transparent 1px),linear-gradient(90deg,var(--line2) 1px,transparent 1px);
+    background-size:34px 34px; background-position:center;
+  }
+  .wrap{max-width:1240px;margin:0 auto;padding:18px 16px 60px;}
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px;}
+  .title h1{font-size:24px;font-weight:900;letter-spacing:-.5px;margin:0;line-height:1;}
+  .title p{margin:6px 0 0;color:var(--muted);font-size:13px;max-width:680px;line-height:1.45;}
+  .kicker{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--edge);text-transform:uppercase;}
+
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
+  .tab{font-family:'Archivo',sans-serif;font-weight:600;font-size:14px;color:var(--muted);background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:9px 16px;cursor:pointer;transition:.15s;}
+  .tab:hover{color:#fff;border-color:var(--edge);}
+  .tab.on{color:#08111c;background:var(--edge);border-color:var(--edge);font-weight:700;}
+  .view{display:none;}
+  .view.on{display:block;}
+
+  button{font-family:'Archivo',sans-serif;font-weight:600;font-size:13px;color:var(--ink);background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:8px 14px;cursor:pointer;transition:.15s;}
+  button:hover{border-color:var(--edge);color:#fff;}
+  button:disabled{opacity:.35;cursor:default;}
+  button.primary{background:var(--edge);color:#08111c;border-color:var(--edge);font-weight:700;}
+  button.ghost{background:transparent;color:var(--muted);}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+  .lab{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--muted2);text-transform:uppercase;}
+
+  /* ====== BUILD GAME ====== */
+  .levels{display:flex;gap:6px;flex-wrap:wrap;}
+  .lvl{font-family:'Space Mono',monospace;font-size:12px;padding:7px 11px;border-radius:8px;border:1px solid var(--line);background:var(--bg2);color:var(--muted);cursor:pointer;transition:.13s;display:flex;align-items:center;gap:7px;}
+  .lvl:hover{color:#fff;border-color:var(--edge);}
+  .lvl.on{color:#08111c;background:var(--edge);border-color:var(--edge);font-weight:700;}
+  .lvl .star{color:var(--client);font-size:11px;}
+  .lvl.on .star{color:#7a5a00;}
+
+  .buildgrid{display:grid;grid-template-columns:1fr 290px;gap:14px;}
+  @media(max-width:920px){.buildgrid{grid-template-columns:1fr;}}
+  .board{background:linear-gradient(160deg,#0e1320,#0b0e14);border:1px solid var(--line);border-radius:14px;padding:8px;position:relative;overflow:hidden;}
+  svg.boardsvg{width:100%;height:auto;display:block;touch-action:manipulation;}
+
+  .slot{cursor:pointer;}
+  .slot rect.box{fill:#0d1422;stroke-dasharray:5 4;stroke-width:1.5;}
+  .slot:hover rect.box{fill:#152033;}
+  .slot.armed rect.box{fill:#16243a;stroke-dasharray:none;stroke-width:2.4;}
+  .slot text.hint{font-family:'Space Mono',monospace;font-size:9.5px;fill:var(--muted2);}
+  .slot text.qm{font-family:'Archivo';font-weight:900;font-size:18px;fill:var(--muted2);}
+  .slot.bad rect.box{fill:#2a1622;stroke:var(--bad)!important;}
+
+  .pnode{cursor:pointer;}
+  .pnode rect.box{stroke-width:2;}
+  .pnode text.lbl{font-family:'Archivo';font-weight:700;font-size:12px;fill:var(--ink);pointer-events:none;}
+  .pnode text.sub{font-family:'Space Mono',monospace;font-size:8.5px;fill:var(--muted);pointer-events:none;}
+  .pnode.pick rect.box{stroke:#fff;stroke-width:3.4;filter:drop-shadow(0 0 7px #fff);}
+  .pnode.miss rect.box{stroke-dasharray:4 3;}
+  .pnode.hintnode rect.box{filter:drop-shadow(0 0 8px currentColor);stroke-width:3.4;}
+  .glink{stroke-width:2.4;fill:none;}
+  .glink.done{stroke:var(--good);filter:drop-shadow(0 0 3px var(--good));}
+  .glink.flash{stroke:var(--bad);}
+  .glink.hint{stroke:var(--client);stroke-dasharray:6 5;opacity:.7;}
+
+  .palette{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;}
+  .palette h3{font-size:12px;font-family:'Space Mono',monospace;letter-spacing:1px;text-transform:uppercase;color:var(--edge);margin:0 0 10px;}
+  .chip{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:var(--bg2);border:1px solid var(--line);border-left-width:4px;border-radius:9px;padding:8px 10px;margin-bottom:7px;cursor:pointer;transition:.12s;}
+  .chip:hover{border-color:var(--edge);}
+  .chip.pick{background:#16243a;border-color:#fff;}
+  .chip .nm{font-size:13px;font-weight:700;}
+  .chip .sb{display:block;font-weight:400;color:var(--muted);font-size:10.5px;font-family:'Space Mono',monospace;margin-top:1px;}
+  .palette .empty{color:var(--muted2);font-size:13px;font-style:italic;padding:8px 0;}
+
+  .scorebar{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px;font-family:'Space Mono',monospace;font-size:13px;}
+  .scorebar b{color:var(--edge);}
+  .phasetag{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--client);}
+  .done-banner{background:#11251a;border:1px solid var(--good);color:var(--good);border-radius:10px;padding:12px 14px;margin-top:12px;font-weight:600;display:none;}
+  .done-banner.show{display:block;}
+  .legend{display:flex;gap:13px;flex-wrap:wrap;margin-top:12px;font-size:11.5px;color:var(--muted);font-family:'Space Mono',monospace;}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px;}
+
+  /* ====== CARDS ====== */
+  .cardgrid{display:grid;grid-template-columns:1fr 280px;gap:14px;align-items:start;}
+  @media(max-width:920px){.cardgrid{grid-template-columns:1fr;}}
+  .flash{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;min-height:300px;display:flex;flex-direction:column;}
+  .flash .meta{display:flex;justify-content:space-between;align-items:center;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;}
+  .flash .secpill{background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:3px 11px;color:var(--edge);}
+  .flash .q{font-size:20px;font-weight:800;line-height:1.35;}
+  .flash .ahint{margin-top:14px;color:var(--muted);font-size:13px;font-style:italic;}
+  .flash .answer{margin-top:16px;padding-top:16px;border-top:1px solid var(--line);font-size:15px;line-height:1.6;color:var(--ink);display:none;}
+  .flash .answer.show{display:block;}
+  .flash .answer .src{display:block;margin-top:12px;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted2);}
+  .flash .spacer{flex:1;}
+  .flash .actions{margin-top:18px;}
+  .grades{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .grades button{padding:11px 4px;font-size:13px;text-align:center;}
+  .g-again{border-color:#5a2a38;color:#ff9bb0;}
+  .g-hard{border-color:#5a4520;color:#f4c95d;}
+  .g-good{border-color:#2a5a40;color:#7fe0ad;}
+  .g-easy{border-color:#2a4a5a;color:#8fd6f2;}
+  .grades button small{display:block;font-family:'Space Mono',monospace;font-size:9px;opacity:.7;margin-top:2px;font-weight:400;}
+
+  .sidecard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;}
+  .sidecard h3{font-size:12px;font-family:'Space Mono',monospace;letter-spacing:1px;text-transform:uppercase;color:var(--edge);margin:0 0 12px;}
+  .stat{display:flex;justify-content:space-between;font-size:13px;margin-bottom:7px;}
+  .stat b{font-family:'Space Mono',monospace;}
+  .stat .due{color:var(--client);}
+  .heat{display:grid;grid-template-columns:repeat(11,1fr);gap:3px;margin-top:4px;}
+  .cell{aspect-ratio:1;border-radius:3px;background:var(--bg2);border:1px solid var(--line);font-family:'Space Mono',monospace;font-size:8px;display:flex;align-items:center;justify-content:center;color:var(--muted2);cursor:pointer;transition:.1s;}
+  .cell:hover{outline:1px solid var(--edge);}
+  .selsec{width:100%;background:var(--bg2);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:9px 11px;font-family:'Archivo';font-size:13px;margin-bottom:10px;}
+  .emptyq{text-align:center;color:var(--muted);padding:40px 10px;}
+  .emptyq b{color:var(--good);display:block;font-size:18px;margin-bottom:6px;}
+
+  iframe.map{width:100%;height:78vh;border:1px solid var(--line);border-radius:14px;background:#0b0e14;}
+  .note{color:var(--muted2);font-size:12px;margin-top:8px;}
+  a.lnk{color:var(--edge);text-decoration:none;}
+  a.lnk:hover{text-decoration:underline;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="title">
+      <div class="kicker">подготовка к интервью</div>
+      <h1>Тренажёр · Архитектура мессенджера</h1>
+      <p>Собирай схему по памяти, прогоняй банк вопросов с интервальными повторами, держи карту под рукой. Прогресс хранится локально в браузере.</p>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab on" data-view="build">🧩 Собери схему</button>
+    <button class="tab" data-view="cards">🃏 Карточки</button>
+    <button class="tab" data-view="map">🗺️ Карта</button>
+  </div>
+
+  <!-- ============ BUILD ============ -->
+  <section class="view on" id="view-build">
+    <div class="panel">
+      <div class="lab" style="margin-bottom:8px;">Уровень — наращивай систему подсистема за подсистемой</div>
+      <div class="levels" id="levels"></div>
+      <div class="note" id="lvlDesc"></div>
+    </div>
+
+    <div class="scorebar">
+      <span class="phasetag" id="phaseTag">Фаза 1 · Расставь блоки</span>
+      <span>Блоки: <b id="scPlaced">0</b>/<span id="scPlacedT">0</span></span>
+      <span>Связи: <b id="scLinks">0</b>/<span id="scLinksT">0</span></span>
+      <span>Ошибки: <b id="scMiss">0</b></span>
+      <span style="margin-left:auto;display:flex;gap:8px;">
+        <button class="ghost" id="btnHint">Подсказка</button>
+        <button class="ghost" id="btnReset">Сбросить уровень</button>
+      </span>
+    </div>
+
+    <div class="buildgrid">
+      <div class="board">
+        <svg class="boardsvg" id="boardSvg" viewBox="0 0 1080 660"></svg>
+        <div class="done-banner" id="doneBanner"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="palette">
+        <h3 id="paletteTitle">Блоки</h3>
+        <div id="paletteBox"></div>
+        <button class="primary" id="btnToLinks" style="width:100%;margin-top:6px;display:none;">Перейти к связям →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CARDS ============ -->
+  <section class="view" id="view-cards">
+    <div class="cardgrid">
+      <div>
+        <select class="selsec" id="secFilter"></select>
+        <div class="flash" id="flashBox"></div>
+      </div>
+      <div>
+        <div class="sidecard">
+          <h3>Сессия</h3>
+          <div class="stat"><span>К повтору сейчас</span><b class="due" id="stDue">0</b></div>
+          <div class="stat"><span>Новых</span><b id="stNew">0</b></div>
+          <div class="stat"><span>Изучено</span><b id="stSeen">0</b></div>
+          <div class="stat"><span>Всего вопросов</span><b id="stTotal">0</b></div>
+          <button class="primary" id="btnStudy" style="width:100%;margin-top:10px;">Начать сессию</button>
+          <button class="ghost" id="btnResetSR" style="width:100%;margin-top:8px;font-size:12px;">Сбросить прогресс карточек</button>
+        </div>
+        <div class="sidecard">
+          <h3>Разделы · уверенность</h3>
+          <div class="heat" id="heat"></div>
+          <div class="note">Зелёный — освоено, жёлтый — учится, серый — не начато. Клик = учить только этот раздел.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MAP ============ -->
+  <section class="view" id="view-map">
+    <iframe class="map" src="view.html" title="Карта архитектуры"></iframe>
+    <div class="note">Это твоя интерактивная схема (view.html) со сценариями. Клик по узлу — что это и зачем; внизу — пошаговые прогоны.</div>
+  </section>
+</div>
+
+<script src="questions.js"></script>
+<script>
+/* ==================== ДАННЫЕ СХЕМЫ ==================== */
+const NODES = {
+  device_a2:{x:24,y:150,w:142,h:58,label:'Десктоп Алисы',sub:'2-е устройство',layer:'client'},
+  auth:{x:190,y:150,w:150,h:58,label:'Auth-сервис',sub:'токены · вход',layer:'edge'},
+  presence:{x:372,y:150,w:148,h:58,label:'Presence-сервис',sub:'онлайн / печатает',layer:'edge'},
+  registry:{x:548,y:150,w:148,h:58,label:'Реестр сессий',sub:'кто где подключён',layer:'edge'},
+  idgen:{x:716,y:150,w:146,h:58,label:'ID-генератор',sub:'уникальность + порядок',layer:'core'},
+  meta:{x:884,y:150,w:160,h:58,label:'Метаданные чата',sub:'участники · роли',layer:'store'},
+  client_a:{x:24,y:286,w:142,h:62,label:'Алиса',sub:'клиент-отправитель',layer:'client'},
+  lb:{x:198,y:286,w:142,h:62,label:'Балансировщик',sub:'gateway',layer:'edge'},
+  conn_a:{x:372,y:286,w:148,h:62,label:'Conn-сервер A',sub:'соединение Алисы',layer:'edge'},
+  msg:{x:548,y:286,w:148,h:62,label:'Message-сервис',sub:'ядро + сигналинг',layer:'core'},
+  conn_b:{x:744,y:286,w:148,h:62,label:'Conn-сервер B',sub:'соединение Боба',layer:'edge'},
+  client_b:{x:920,y:286,w:136,h:62,label:'Боб',sub:'клиент-получатель',layer:'client'},
+  media:{x:24,y:444,w:142,h:58,label:'Медиа + CDN',sub:'фото, видео, превью',layer:'store'},
+  sync:{x:190,y:444,w:150,h:58,label:'Sync-сервис',sub:'курсор · догон',layer:'core'},
+  queue:{x:372,y:444,w:148,h:58,label:'Очередь / outbox',sub:'для офлайна',layer:'core'},
+  db:{x:548,y:444,w:148,h:58,label:'БД (шардированная)',sub:'durable-лог',layer:'store'},
+  fanout:{x:724,y:444,w:128,h:58,label:'Fan-out',sub:'группы / каналы',layer:'scale'},
+  push:{x:892,y:444,w:164,h:58,label:'Push-сервис',sub:'шлюз уведомлений',layer:'push'},
+  turn:{x:312,y:572,w:176,h:58,label:'STUN / TURN',sub:'обход NAT · релей',layer:'rtc'},
+  sfu:{x:616,y:572,w:176,h:58,label:'SFU · медиа-сервер',sub:'групповые звонки',layer:'rtc'},
+};
+const LINKS = [
+  ['client_a','lb'],['lb','conn_a'],['conn_a','msg'],['msg','conn_b'],['conn_b','client_b'],
+  ['msg','registry'],['registry','conn_b'],['msg','db'],['presence','conn_a'],['msg','queue'],
+  ['msg','push'],['push','client_b'],['queue','conn_b'],['client_a','media'],['msg','fanout'],
+  ['fanout','db'],['device_a2','lb'],['conn_a','device_a2'],['presence','conn_b'],['fanout','conn_b'],
+  ['auth','lb'],['msg','idgen'],['meta','fanout'],['sync','db'],['sync','conn_b'],
+  ['client_a','client_b',1],['client_a','turn',1],['turn','client_b',1],['client_a','sfu',1],
+  ['sfu','client_b',1],['msg','turn',1],['msg','sfu',1],
+];
+const LAYERS = {
+  client:{c:'#f4c95d',n:'Клиент'}, edge:{c:'#5ec8f2',n:'Соединения'}, core:{c:'#8b9bff',n:'Ядро'},
+  store:{c:'#5ad19a',n:'Хранение'}, scale:{c:'#ff944d',n:'Масштаб'}, push:{c:'#cf91f5',n:'Пуши'}, rtc:{c:'#ff6f91',n:'RTC'},
+};
+const LEVELS = [
+  {id:'skeleton',name:'1 · Скелет',star:1,desc:'Минимальный костяк: проведи одно сообщение Алиса → Боб. Именно с него начинаешь на интервью.',add:['client_a','lb','conn_a','msg','registry','conn_b','client_b','db']},
+  {id:'reliab',name:'2 · Надёжность',desc:'ID-генератор для порядка, очередь офлайна, догон по курсору после переподключения.',add:['idgen','queue','sync']},
+  {id:'session',name:'3 · Сессия',desc:'Аутентификация при подключении и статусы присутствия (онлайн / печатает).',add:['auth','presence']},
+  {id:'media',name:'4 · Медиа',desc:'Файлы идут мимо канала сообщений — объектное хранилище + CDN.',add:['media']},
+  {id:'scale',name:'5 · Масштаб',desc:'Метаданные чата, fan-out для групп и каналов, пуши через APNs/FCM.',add:['meta','fanout','push']},
+  {id:'multi',name:'6 · Мультидевайс',desc:'Второе устройство аккаунта со своей сессией и курсором.',add:['device_a2']},
+  {id:'rtc',name:'7 · Звонки',desc:'Сигналинг через ядро, медиа через STUN/TURN и SFU.',add:['turn','sfu']},
+];
+
+/* ==================== ВКЛАДКИ ==================== */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');
+  document.getElementById('view-'+t.dataset.view).classList.add('on');
+  if(t.dataset.view==='cards') renderCardsSide();
+});
+
+/* ==================== ИГРА «СОБЕРИ СХЕМУ» ==================== */
+const SVGNS='http://www.w3.org/2000/svg';
+const svg=document.getElementById('boardSvg');
+const BSTORE='msg_build_v1';
+let curLevel=0, levelNodes=[], reqLinks=[], placed={}, phase='place';
+let pickChip=null, pickNode=null, doneLinks=new Set(), missCount=0, hintTimer=null;
+
+function bestStore(){try{return JSON.parse(localStorage.getItem(BSTORE))||{}}catch(e){return {}}}
+function saveBest(o){localStorage.setItem(BSTORE,JSON.stringify(o));}
+
+function levelSet(idx){let s=[];for(let i=0;i<=idx;i++)s=s.concat(LEVELS[i].add);return s;}
+function el(tag,attrs){const e=document.createElementNS(SVGNS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;}
+function center(id){const n=NODES[id];return [n.x+n.w/2,n.y+n.h/2];}
+
+function renderLevels(){
+  const box=document.getElementById('levels');box.innerHTML='';
+  const best=bestStore();
+  LEVELS.forEach((lv,i)=>{
+    const b=document.createElement('button');
+    b.className='lvl'+(i===curLevel?' on':'');
+    const done=best[lv.id]&&best[lv.id].complete;
+    b.innerHTML=(done?'<span class="star">★</span>':'')+lv.name;
+    b.onclick=()=>{curLevel=i;startLevel();};
+    box.appendChild(b);
+  });
+  document.getElementById('lvlDesc').textContent=LEVELS[curLevel].desc;
+}
+
+function startLevel(){
+  levelNodes=levelSet(curLevel);
+  const includeRtc=curLevel>=LEVELS.findIndex(l=>l.id==='rtc');
+  const setHas=id=>levelNodes.includes(id);
+  reqLinks=LINKS.filter(l=>setHas(l[0])&&setHas(l[1])&&(!l[2]||includeRtc));
+  placed={}; phase='place'; pickChip=null; pickNode=null; doneLinks=new Set(); missCount=0;
+  document.getElementById('doneBanner').classList.remove('show');
+  document.getElementById('btnToLinks').style.display='none';
+  renderLevels(); renderBoard(); renderPalette(); updateScore();
+  document.getElementById('phaseTag').textContent='Фаза 1 · Расставь блоки';
+  document.getElementById('paletteTitle').textContent='Блоки — кликни, потом место на доске';
+  renderLegend();
+}
+
+function viewBox(){
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  levelNodes.forEach(id=>{const n=NODES[id];minX=Math.min(minX,n.x);minY=Math.min(minY,n.y);maxX=Math.max(maxX,n.x+n.w);maxY=Math.max(maxY,n.y+n.h);});
+  const p=34;return `${minX-p} ${minY-p} ${maxX-minX+2*p} ${maxY-minY+2*p}`;
+}
+
+function renderBoard(){
+  svg.innerHTML=''; svg.setAttribute('viewBox',viewBox());
+  const gl=el('g',{}); gl.id='glinks'; svg.appendChild(gl);
+  // ghost slots (unplaced) or placed nodes
+  levelNodes.forEach(id=>{
+    const n=NODES[id], col=LAYERS[n.layer].c;
+    if(placed[id]) drawPlaced(id);
+    else{
+      const g=el('g',{class:'slot'}); g.dataset.id=id; g.style.color=col;
+      g.appendChild(el('rect',{class:'box',x:n.x,y:n.y,width:n.w,height:n.h,rx:11,stroke:col}));
+      const qm=el('text',{class:'qm',x:n.x+n.w/2,y:n.y+n.h/2-3,'text-anchor':'middle','dominant-baseline':'middle'});qm.textContent='?';
+      g.appendChild(qm);
+      const ht=el('text',{class:'hint',x:n.x+n.w/2,y:n.y+n.h-9,'text-anchor':'middle'});ht.textContent=n.sub;
+      g.appendChild(ht);
+      g.onclick=()=>onSlotClick(id,g);
+      svg.appendChild(g);
+    }
+  });
+}
+
+function drawPlaced(id){
+  const n=NODES[id], col=LAYERS[n.layer].c;
+  const g=el('g',{class:'pnode'}); g.dataset.id=id; g.style.color=col;
+  g.appendChild(el('rect',{class:'box',x:n.x,y:n.y,width:n.w,height:n.h,rx:11,fill:'#111726',stroke:col}));
+  const t1=el('text',{class:'lbl',x:n.x+10,y:n.y+24});t1.textContent=n.label;g.appendChild(t1);
+  const t2=el('text',{class:'sub',x:n.x+10,y:n.y+40});t2.textContent=n.sub;g.appendChild(t2);
+  g.onclick=()=>onNodeClick(id,g);
+  svg.appendChild(g);
+}
+
+function onSlotClick(id,g){
+  if(phase!=='place') return;
+  if(!pickChip){flashBad(g);return;}
+  if(pickChip===id){ placed[id]=true; pickChip=null; renderBoard(); renderPalette(); updateScore(); checkPlaceDone(); }
+  else { missCount++; flashBad(g); updateScore(); }
+}
+function flashBad(g){g.classList.add('bad');setTimeout(()=>g.classList.remove('bad'),350);}
+
+function onNodeClick(id,g){
+  if(phase==='place'){ // un-place
+    delete placed[id]; renderBoard(); renderPalette(); updateScore(); return;
+  }
+  // link phase
+  if(!pickNode){ pickNode=id; g.classList.add('pick'); return; }
+  if(pickNode===id){ pickNode=null; g.classList.remove('pick'); return; }
+  attemptLink(pickNode,id);
+  document.querySelectorAll('.pnode.pick').forEach(x=>x.classList.remove('pick'));
+  pickNode=null;
+}
+
+function linkKey(a,b){return [a,b].sort().join('~');}
+function attemptLink(a,b){
+  const key=linkKey(a,b);
+  const exists=reqLinks.some(l=>linkKey(l[0],l[1])===key);
+  if(exists && !doneLinks.has(key)){ doneLinks.add(key); drawLink(a,b,'done'); updateScore(); checkLinksDone(); }
+  else if(exists){ /* already done */ }
+  else { missCount++; updateScore(); drawLink(a,b,'flash',true); }
+}
+function drawLink(a,b,cls,temp){
+  const [ax,ay]=center(a),[bx,by]=center(b);
+  const ln=el('line',{class:'glink '+cls,x1:ax,y1:ay,x2:bx,y2:by});
+  document.getElementById('glinks').appendChild(ln);
+  if(temp) setTimeout(()=>ln.remove(),350);
+}
+
+function renderPalette(){
+  const box=document.getElementById('paletteBox');box.innerHTML='';
+  if(phase==='link'){ box.innerHTML='<div class="empty">Соедини блоки: кликни один, потом второй. Нужно восстановить все связи.</div>'; document.getElementById('btnToLinks').style.display='none'; return; }
+  const remaining=levelNodes.filter(id=>!placed[id]);
+  if(remaining.length===0){ box.innerHTML='<div class="empty">Все блоки на месте ✓</div>'; return; }
+  shuffle(remaining.slice()).forEach(id=>{
+    const n=NODES[id],col=LAYERS[n.layer].c;
+    const c=document.createElement('button');
+    c.className='chip'+(pickChip===id?' pick':'');c.style.borderLeftColor=col;
+    c.innerHTML=`<span><span class="nm">${n.label}</span><span class="sb">${LAYERS[n.layer].n}</span></span>`;
+    c.onclick=()=>{pickChip=(pickChip===id?null:id);renderPalette();};
+    box.appendChild(c);
+  });
+}
+
+function checkPlaceDone(){
+  if(levelNodes.every(id=>placed[id])){
+    document.getElementById('btnToLinks').style.display='block';
+    document.getElementById('paletteBox').innerHTML='<div class="empty">Все блоки на месте ✓ Переходи к связям.</div>';
+  }
+}
+document.getElementById('btnToLinks').onclick=()=>{
+  phase='link'; pickChip=null;
+  document.getElementById('phaseTag').textContent='Фаза 2 · Восстанови связи';
+  document.getElementById('paletteTitle').textContent='Связи';
+  renderBoard(); renderPalette(); updateScore();
+};
+
+function checkLinksDone(){
+  if(doneLinks.size===reqLinks.length && reqLinks.length>0){
+    const best=bestStore(); const lv=LEVELS[curLevel].id;
+    const prev=best[lv]; const score={complete:true,miss:missCount};
+    if(!prev||missCount<prev.miss) best[lv]=score; else best[lv].complete=true;
+    saveBest(best);
+    const bn=document.getElementById('doneBanner');
+    bn.textContent=`✓ Уровень «${LEVELS[curLevel].name}» собран! Ошибок: ${missCount}.`+(curLevel<LEVELS.length-1?' Жми следующий уровень сверху.':' Это полная схема — теперь по памяти и без подсказок.');
+    bn.classList.add('show'); renderLevels();
+  }
+}
+
+function updateScore(){
+  document.getElementById('scPlaced').textContent=Object.keys(placed).length;
+  document.getElementById('scPlacedT').textContent=levelNodes.length;
+  document.getElementById('scLinks').textContent=doneLinks.size;
+  document.getElementById('scLinksT').textContent=reqLinks.length;
+  document.getElementById('scMiss').textContent=missCount;
+}
+
+document.getElementById('btnReset').onclick=()=>startLevel();
+document.getElementById('btnHint').onclick=()=>{
+  clearTimeout(hintTimer);
+  document.querySelectorAll('.glink.hint').forEach(x=>x.remove());
+  document.querySelectorAll('.hintnode').forEach(x=>x.classList.remove('hintnode'));
+  if(phase==='place'){
+    const miss=levelNodes.find(id=>!placed[id]); if(!miss)return;
+    pickChip=miss; renderPalette();
+    const g=[...svg.querySelectorAll('.slot')].find(s=>s.dataset.id===miss);
+    if(g){g.classList.add('armed');hintTimer=setTimeout(()=>g.classList.remove('armed'),1500);}
+  } else {
+    const miss=reqLinks.find(l=>!doneLinks.has(linkKey(l[0],l[1]))); if(!miss)return;
+    drawLink(miss[0],miss[1],'hint');
+    [miss[0],miss[1]].forEach(id=>{const g=[...svg.querySelectorAll('.pnode')].find(s=>s.dataset.id===id);if(g)g.classList.add('hintnode');});
+    hintTimer=setTimeout(()=>{document.querySelectorAll('.glink.hint').forEach(x=>x.remove());document.querySelectorAll('.hintnode').forEach(x=>x.classList.remove('hintnode'));},1800);
+  }
+};
+function renderLegend(){
+  const used=[...new Set(levelNodes.map(id=>NODES[id].layer))];
+  document.getElementById('legend').innerHTML=used.map(l=>`<span><i style="background:${LAYERS[l].c}"></i>${LAYERS[l].n}</span>`).join('');
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+/* ==================== КАРТОЧКИ + ИНТЕРВАЛЬНЫЕ ПОВТОРЫ ==================== */
+const Q=window.QUESTIONS||[];
+const SR='msg_sr_v1';
+const DAY=864e5, MIN=6e4;
+function srStore(){try{return JSON.parse(localStorage.getItem(SR))||{}}catch(e){return {}}}
+function srSave(o){localStorage.setItem(SR,JSON.stringify(o));}
+function cardState(i){const s=srStore();return s[i]||{ease:2.5,interval:0,due:0,reps:0};}
+function isDue(i){const c=srStore()[i];return !c?false:c.due<=Date.now();}
+function isNew(i){return !srStore()[i];}
+
+let queue=[], qPos=0, secSel='all', revealed=false;
+
+function buildSecFilter(){
+  const sel=document.getElementById('secFilter');
+  const secs=[...new Set(Q.map(c=>c.sec))].sort((a,b)=>a-b);
+  sel.innerHTML='<option value="all">Все разделы ('+Q.length+')</option>'+
+    secs.map(s=>{const t=Q.find(c=>c.sec===s).secTitle;const n=Q.filter(c=>c.sec===s).length;return `<option value="${s}">Раздел ${s} · ${t} (${n})</option>`}).join('');
+  sel.value=secSel;
+  sel.onchange=()=>{secSel=sel.value;renderCardsSide();};
+}
+
+function pool(){return Q.map((c,i)=>i).filter(i=>secSel==='all'||String(Q[i].sec)===String(secSel));}
+
+function renderCardsSide(){
+  buildSecFilter();
+  const p=pool();
+  const due=p.filter(isDue).length, nw=p.filter(isNew).length, seen=p.filter(i=>!isNew(i)).length;
+  document.getElementById('stDue').textContent=due;
+  document.getElementById('stNew').textContent=nw;
+  document.getElementById('stSeen').textContent=seen;
+  document.getElementById('stTotal').textContent=p.length;
+  renderHeat();
+  if(!queue.length) renderFlashIdle(due,nw);
+}
+function renderHeat(){
+  const heat=document.getElementById('heat');heat.innerHTML='';
+  const secs=[...new Set(Q.map(c=>c.sec))].sort((a,b)=>a-b);
+  secs.forEach(s=>{
+    const idxs=Q.map((c,i)=>i).filter(i=>Q[i].sec===s);
+    const seen=idxs.filter(i=>!isNew(i));
+    let col=getComputedStyle(document.documentElement).getPropertyValue('--bg2');
+    if(seen.length){
+      const avgInt=seen.reduce((a,i)=>a+(srStore()[i].interval||0),0)/seen.length;
+      const frac=seen.length/idxs.length;
+      if(avgInt>=3 && frac>=0.6) col='rgba(90,209,154,.85)';
+      else if(frac>0) col='rgba(244,201,93,.7)';
+    }
+    const c=document.createElement('div');c.className='cell';c.style.background=col;c.textContent=s;
+    c.title=`Раздел ${s}: ${seen.length}/${idxs.length} изучено`;
+    c.onclick=()=>{secSel=String(s);document.getElementById('secFilter').value=secSel;renderCardsSide();};
+    heat.appendChild(c);
+  });
+}
+function renderFlashIdle(due,nw){
+  document.getElementById('flashBox').innerHTML=
+    `<div class="emptyq"><b>Готова тренироваться?</b>${due?`К повтору сейчас: ${due}.`:'Срочных повторов нет.'} ${nw?`Новых вопросов: ${nw}.`:''}<br><br>Жми «Начать сессию» справа. Отвечай вслух или на бумаге <i>до</i> того, как раскроешь ответ — так тренируется воспроизведение, а не узнавание.</div>`;
+}
+
+document.getElementById('btnStudy').onclick=()=>{
+  const p=pool();
+  let due=p.filter(isDue), nw=p.filter(isNew);
+  queue=shuffle(due).concat(shuffle(nw)).slice(0,40);
+  if(!queue.length) queue=shuffle(p.slice()).slice(0,20); // всё освоено — повтори по кругу
+  qPos=0; showCard();
+};
+document.getElementById('btnResetSR').onclick=()=>{
+  if(confirm('Сбросить весь прогресс карточек?')){localStorage.removeItem(SR);queue=[];renderCardsSide();}
+};
+
+function showCard(){
+  if(qPos>=queue.length){
+    document.getElementById('flashBox').innerHTML=`<div class="emptyq"><b>Сессия завершена ✓</b>Прогресс сохранён. Можно начать новую или переключиться на сборку схемы.</div>`;
+    queue=[];renderCardsSide();return;
+  }
+  revealed=false;
+  const i=queue[qPos], c=Q[i];
+  document.getElementById('flashBox').innerHTML=`
+    <div class="meta"><span class="secpill">Раздел ${c.sec} · ${c.secTitle}</span><span>${qPos+1} / ${queue.length}</span></div>
+    <div class="q">${c.q}</div>
+    <div class="ahint" id="ahint">Ответь сама вслух, потом раскрой ↓</div>
+    <div class="answer" id="answer">${c.a}<span class="src">↩ ${c.courseFile}</span></div>
+    <div class="spacer"></div>
+    <div class="actions" id="actions">
+      <button class="primary" id="btnReveal" style="width:100%;">Показать ответ</button>
+    </div>`;
+  document.getElementById('btnReveal').onclick=reveal;
+}
+function reveal(){
+  revealed=true;
+  document.getElementById('answer').classList.add('show');
+  document.getElementById('ahint').style.display='none';
+  document.getElementById('actions').innerHTML=`
+    <div class="lab" style="margin-bottom:7px;">Насколько уверенно ответила?</div>
+    <div class="grades">
+      <button class="g-again" data-g="0">Снова<small>&lt;10м</small></button>
+      <button class="g-hard" data-g="1">Трудно<small>~1д</small></button>
+      <button class="g-good" data-g="2">Хорошо<small>дни</small></button>
+      <button class="g-easy" data-g="3">Легко<small>недели</small></button>
+    </div>`;
+  document.querySelectorAll('.grades button').forEach(b=>b.onclick=()=>grade(+b.dataset.g));
+}
+function grade(g){
+  const i=queue[qPos]; const s=srStore(); const c=s[i]||{ease:2.5,interval:0,due:0,reps:0};
+  if(g===0){ c.ease=Math.max(1.3,c.ease-0.2); c.interval=0; c.reps=0; c.due=Date.now()+10*MIN; }
+  else if(g===1){ c.ease=Math.max(1.3,c.ease-0.15); c.interval=Math.max(1,(c.interval||1)*1.2); c.reps++; c.due=Date.now()+c.interval*DAY; }
+  else if(g===2){ c.interval=c.reps===0?1:(c.reps===1?3:Math.round((c.interval||1)*c.ease)); c.reps++; c.due=Date.now()+c.interval*DAY; }
+  else { c.ease=c.ease+0.15; c.interval=Math.round((c.interval||1)*c.ease*1.3); c.reps++; c.due=Date.now()+c.interval*DAY; }
+  s[i]=c; srSave(s);
+  if(g===0) queue.push(i); // показать снова в конце сессии
+  qPos++; showCard(); renderCardsSide();
+}
+
+/* ==================== INIT ==================== */
+renderLevels(); startLevel(); renderCardsSide();
+</script>
+</body>
+</html>
