@@ -714,7 +714,7 @@ let queue=[], qPos=0, secSel='all', revealed=false;
 
 function buildSecFilter(){
   const sel=document.getElementById('secFilter');
-  const secs=[...new Set(Q.map(c=>c.sec))].sort((a,b)=>a-b);
+  const secs=[...new Set(Q.map(c=>c.sec))].sort((a,b)=>(parseInt(a)-parseInt(b))||String(a).localeCompare(String(b)));
   sel.innerHTML='<option value="all">Все разделы ('+Q.length+')</option>'+
     secs.map(s=>{const t=Q.find(c=>c.sec===s).secTitle;const n=Q.filter(c=>c.sec===s).length;return `<option value="${s}">Раздел ${s} · ${t} (${n})</option>`}).join('');
   sel.value=secSel;
@@ -735,7 +735,7 @@ function renderCardsSide(){
 }
 function renderHeat(){
   const heat=document.getElementById('heat');heat.innerHTML='';
-  const secs=[...new Set(Q.map(c=>c.sec))].sort((a,b)=>a-b);
+  const secs=[...new Set(Q.map(c=>c.sec))].sort((a,b)=>(parseInt(a)-parseInt(b))||String(a).localeCompare(String(b)));
   secs.forEach(s=>{
     const idxs=Q.map((c,i)=>i).filter(i=>Q[i].sec===s);
     const seen=idxs.filter(i=>!isNew(i));
