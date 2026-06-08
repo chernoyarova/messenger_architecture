@@ -260,6 +260,27 @@
   .md a{color:var(--edge);}
   .rnav{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:26px;padding-top:18px;border-top:1px solid var(--line);}
   .rnav .grow{flex:1;}
+
+  /* ====== QUIZ ====== */
+  .quiz{margin-top:30px;padding-top:22px;border-top:2px solid var(--line);}
+  .quizhead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+  .quizhead h2{font-size:19px;font-weight:800;margin:0;}
+  .qscore{font-weight:800;color:var(--edge);font-size:16px;}
+  .quizsub{color:var(--muted);font-size:13px;margin:4px 0 18px;}
+  .qitem{margin-bottom:20px;}
+  .qq{font-size:15px;font-weight:700;margin-bottom:9px;line-height:1.4;}
+  .qq b{color:var(--edge);margin-right:5px;}
+  .qopts{display:flex;flex-direction:column;gap:7px;}
+  .qopt{text-align:left;width:100%;background:var(--panel);border:1px solid var(--line);padding:10px 13px;font-weight:500;font-size:13.5px;line-height:1.45;white-space:normal;color:var(--ink);transition:.12s;}
+  .qopt:hover{border-color:var(--edge);color:var(--ink);}
+  .qopt.sel{border-color:var(--edge);background:#eef3ff;}
+  .qopt.right{border-color:var(--good);background:#eafaf1;color:#0f7a4a;font-weight:600;}
+  .qopt.wrong{border-color:var(--bad);background:#fdeef3;color:#b42c57;}
+  .qopt .ltr{font-weight:800;margin-right:8px;}
+  .qexp{display:none;margin-top:9px;font-size:13px;line-height:1.55;color:var(--muted);background:var(--bg2);border-radius:8px;padding:9px 12px;}
+  .qexp.show{display:block;}
+  .qexp b{color:var(--ink);}
+  .quizfoot{display:flex;gap:8px;margin-top:8px;}
 </style>
 </head>
 <body>
@@ -397,6 +418,7 @@
 <script src="marked.min.js"></script>
 <script src="questions.js"></script>
 <script src="course.js"></script>
+<script src="tests.js"></script>
 <script src="mapdata.js"></script>
 <script>
 /* ==================== ДАННЫЕ СХЕМЫ ==================== */
@@ -803,7 +825,7 @@ function mdToHtml(md){
 }
 function renderReader(meta,title,html,navHtml){
   document.getElementById('reader').innerHTML=
-    `<div class="rmeta">${meta}</div><h1 class="rt">${title}</h1><div class="md">${html}</div><div class="rnav" id="rnav">${navHtml}</div>`;
+    `<div class="rmeta">${meta}</div><h1 class="rt">${title}</h1><div class="md">${html}</div><div id="quizbox"></div><div class="rnav" id="rnav">${navHtml}</div>`;
   window.scrollTo(0,0);
 }
 function storeKeyOf(key){return (key.startsWith('sec:')?'sec':'ref')+key.slice(4);}
@@ -825,6 +847,7 @@ function openSection(n){
   n=String(n);const s=COURSE.sections[n];if(!s)return;
   curDoc='sec:'+n;
   renderReader('Раздел '+n,s.title,mdToHtml(s.md),navButtons('sec:'+n));
+  renderQuiz(n);
   renderToc();
 }
 function openRef(id){
@@ -834,6 +857,45 @@ function openRef(id){
   renderToc();
 }
 function studySection(n){secSel=String(n);goTab('cards');document.getElementById('secFilter').value=secSel;renderCardsSide();document.getElementById('btnStudy').click();}
+
+/* ---- Тест по разделу ---- */
+const TESTS=window.TESTS||{};
+const QLET=['А','Б','В','Г'];
+let quizSec=null,quizSel={},quizChecked=false;
+function renderQuiz(n){
+  const box=document.getElementById('quizbox');if(!box)return;
+  const qs=TESTS[String(n)];
+  if(!qs||!qs.length){box.innerHTML='';return;}
+  quizSec=String(n);quizSel={};quizChecked=false;
+  box.innerHTML=`<div class="quiz">
+    <div class="quizhead"><h2>Тест по разделу</h2><span class="qscore" id="qscore"></span></div>
+    <div class="quizsub">Выбери ответ в каждом из ${qs.length} вопросов, потом нажми «Проверить».</div>
+    ${qs.map((q,qi)=>`<div class="qitem">
+      <div class="qq"><b>${qi+1}.</b>${q.q}</div>
+      <div class="qopts">${q.opts.map((o,oi)=>`<button class="qopt" id="q${qi}o${oi}" onclick="pickOpt(${qi},${oi})"><span class="ltr">${QLET[oi]})</span>${o}</button>`).join('')}</div>
+      <div class="qexp" id="qexp${qi}"></div>
+    </div>`).join('')}
+    <div class="quizfoot"><button class="primary" onclick="checkQuiz()">Проверить</button><button class="ghost" onclick="resetQuiz()">Заново</button></div>
+  </div>`;
+}
+function pickOpt(qi,oi){
+  if(quizChecked)return;
+  quizSel[qi]=oi;
+  TESTS[quizSec][qi].opts.forEach((o,i)=>document.getElementById('q'+qi+'o'+i).classList.toggle('sel',i===oi));
+}
+function checkQuiz(){
+  const qs=TESTS[quizSec];if(!qs)return;quizChecked=true;let score=0;
+  qs.forEach((q,qi)=>{
+    q.opts.forEach((o,oi)=>{const b=document.getElementById('q'+qi+'o'+oi);b.classList.remove('sel');
+      if(oi===q.correct)b.classList.add('right');
+      else if(quizSel[qi]===oi)b.classList.add('wrong');});
+    if(quizSel[qi]===q.correct)score++;
+    const ex=document.getElementById('qexp'+qi);ex.innerHTML=`<b>${QLET[q.correct]})</b> ${q.exp}`;ex.classList.add('show');
+  });
+  const sc=document.getElementById('qscore');sc.textContent=`${score} / ${qs.length}`;
+  sc.style.color=score===qs.length?'var(--good)':(score>=qs.length/2?'var(--edge)':'var(--bad)');
+}
+function resetQuiz(){renderQuiz(quizSec);const b=document.getElementById('quizbox');if(b)window.scrollTo({top:b.getBoundingClientRect().top+window.scrollY-70,behavior:'smooth'});}
 
 /* ==================== ДАШБОРД (главная) ==================== */
 function pillarStats(){
