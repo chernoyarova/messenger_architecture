@@ -243,8 +243,8 @@
   .toc .ti .tt{font-size:12.5px;font-weight:600;line-height:1.3;}
   .reader{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px 32px;min-height:300px;}
   .reader .rmeta{font-size:11px;letter-spacing:.6px;color:var(--muted2);text-transform:uppercase;font-weight:700;margin-bottom:6px;}
-  .reader h1.rt{font-size:26px;font-weight:900;margin:0 0 18px;line-height:1.15;max-width:30ch;}
-  .md{font-size:15.5px;line-height:1.68;color:#2c3547;max-width:72ch;}
+  .reader h1.rt{font-size:26px;font-weight:900;margin:0 0 18px;line-height:1.15;}
+  .md{font-size:15.5px;line-height:1.68;color:#2c3547;}
   .md h2{font-size:19px;font-weight:800;margin:26px 0 10px;color:var(--ink);border-bottom:1px solid var(--line2);padding-bottom:6px;}
   .md h3{font-size:16px;font-weight:700;margin:20px 0 8px;color:var(--ink);}
   .md h4{font-size:14px;font-weight:700;margin:16px 0 6px;color:var(--muted);}
@@ -266,7 +266,9 @@
   .quizhead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
   .quizhead h2{font-size:19px;font-weight:800;margin:0;}
   .qscore{font-weight:800;color:var(--edge);font-size:16px;}
-  .quizsub{color:var(--muted);font-size:13px;margin:4px 0 18px;}
+  .quizsub{color:var(--muted);font-size:13px;margin:4px 0 10px;}
+  .qresult{font-size:13.5px;font-weight:600;color:var(--muted);margin-bottom:14px;min-height:1px;}
+  .qresult.ok{color:#0f7a4a;}
   .qitem{margin-bottom:20px;}
   .qq{font-size:15px;font-weight:700;margin-bottom:9px;line-height:1.4;}
   .qq b{color:var(--edge);margin-right:5px;}
@@ -779,12 +781,14 @@ function grade(g){
 
 /* ==================== КУРС ==================== */
 const COURSE=window.COURSE||{parts:[],sections:{},refs:[]};
-const READ='msg_read_v1';
-function readStore(){try{return JSON.parse(localStorage.getItem(READ))||{}}catch(e){return {}}}
-function isRead(k){return !!readStore()[k];}
-function toggleRead(k){const s=readStore();if(s[k])delete s[k];else s[k]=true;localStorage.setItem(READ,JSON.stringify(s));
-  const rn=document.getElementById('rnav');if(rn&&curDoc)rn.innerHTML=navButtons(curDoc);
-  renderToc();renderDashboard();}
+const READ='msg_read_v1';            // legacy (очищается при сбросе)
+const TST='msg_test_v1';             // лучший результат теста по разделу
+function testStore(){try{return JSON.parse(localStorage.getItem(TST))||{}}catch(e){return {}}}
+function testCount(n){const v=testStore()[String(n)];return v==null?null:v;}
+function testTotal(n){const t=(window.TESTS||{})[String(n)];return t?t.length:6;}
+function secPassed(n){const c=testCount(n);return c!=null&&c>=testTotal(n);}
+function secFrac(n){const c=testCount(n);return c==null?0:Math.min(1,c/testTotal(n));}
+function saveTest(n,score){const s=testStore();const k=String(n);if(score>(s[k]||0))s[k]=score;localStorage.setItem(TST,JSON.stringify(s));}
 
 // плоский порядок для навигации пред/след
 function courseOrder(){
@@ -802,7 +806,7 @@ function renderToc(){
     p.secs.forEach(n=>{
       const s=COURSE.sections[String(n)];if(!s)return;
       const b=document.createElement('button');
-      b.className='ti'+(curDoc==='sec:'+n?' on':'')+(isRead('sec'+n)?' read':'');
+      b.className='ti'+(curDoc==='sec:'+n?' on':'')+(secPassed(n)?' read':'');
       b.innerHTML=`<span class="n">${n}</span><span class="tt">${s.title}</span>`;
       b.onclick=()=>openSection(n);
       toc.appendChild(b);
@@ -812,7 +816,7 @@ function renderToc(){
     const h=document.createElement('div');h.className='part';h.textContent='Справка · сети и соединения';toc.appendChild(h);
     COURSE.refs.forEach(r=>{
       const b=document.createElement('button');
-      b.className='ti'+(curDoc==='ref:'+r.id?' on':'')+(isRead('ref'+r.id)?' read':'');
+      b.className='ti'+(curDoc==='ref:'+r.id?' on':'');
       b.innerHTML=`<span class="n">§</span><span class="tt">${r.title}</span>`;
       b.onclick=()=>openRef(r.id);
       toc.appendChild(b);
@@ -828,16 +832,14 @@ function renderReader(meta,title,html,navHtml){
     `<div class="rmeta">${meta}</div><h1 class="rt">${title}</h1><div class="md">${html}</div><div id="quizbox"></div><div class="rnav" id="rnav">${navHtml}</div>`;
   window.scrollTo(0,0);
 }
-function storeKeyOf(key){return (key.startsWith('sec:')?'sec':'ref')+key.slice(4);}
 function navButtons(key){
   const ord=courseOrder();const i=ord.findIndex(x=>x.type+':'+x.key===key);
-  const sk=storeKeyOf(key), done=isRead(sk);
-  let h=`<button class="${done?'ghost':'primary'}" onclick="toggleRead('${sk}')">${done?'✓ Пройдено — снять отметку':'Отметить пройденным'}</button>`;
-  h+='<span class="grow"></span>';
+  let h='';
   if(i>0){const p=ord[i-1];h+=`<button class="ghost" onclick="openDoc('${p.type}','${p.key}')">← Назад</button>`;}
+  h+='<span class="grow"></span>';
   if(key.startsWith('sec:')){
     const n=key.slice(4);const cnt=(window.QUESTIONS||[]).filter(c=>String(c.sec)===n).length;
-    if(cnt)h+=`<button class="ghost" onclick="studySection(${n})">📝 Вопросы (${cnt})</button>`;
+    if(cnt)h+=`<button class="ghost" onclick="studySection(${n})">📝 Открытые вопросы (${cnt})</button>`;
   }
   if(i<ord.length-1){const nx=ord[i+1];h+=`<button class="ghost" onclick="openDoc('${nx.type}','${nx.key}')">Дальше →</button>`;}
   return h;
@@ -869,7 +871,8 @@ function renderQuiz(n){
   quizSec=String(n);quizSel={};quizChecked=false;
   box.innerHTML=`<div class="quiz">
     <div class="quizhead"><h2>Тест по разделу</h2><span class="qscore" id="qscore"></span></div>
-    <div class="quizsub">Выбери ответ в каждом из ${qs.length} вопросов, потом нажми «Проверить».</div>
+    <div class="quizsub">Выбери ответ в каждом из ${qs.length} вопросов, потом нажми «Проверить». Раздел засчитывается пройденным при ${qs.length}/${qs.length}.</div>
+    <div class="qresult" id="qresult"></div>
     ${qs.map((q,qi)=>`<div class="qitem">
       <div class="qq"><b>${qi+1}.</b>${q.q}</div>
       <div class="qopts">${q.opts.map((o,oi)=>`<button class="qopt" id="q${qi}o${oi}" onclick="pickOpt(${qi},${oi})"><span class="ltr">${QLET[oi]})</span>${o}</button>`).join('')}</div>
@@ -894,31 +897,38 @@ function checkQuiz(){
   });
   const sc=document.getElementById('qscore');sc.textContent=`${score} / ${qs.length}`;
   sc.style.color=score===qs.length?'var(--good)':(score>=qs.length/2?'var(--edge)':'var(--bad)');
+  saveTest(quizSec,score);
+  const res=document.getElementById('qresult');
+  if(score===qs.length){res.className='qresult ok';res.textContent='✓ Раздел пройден — засчитан в прогрессе на Главной.';}
+  else{res.className='qresult';res.textContent=`Чтобы раздел засчитался как пройденный, нужно ${qs.length}/${qs.length}. Разбери ошибки и жми «Заново».`;}
+  renderToc();renderDashboard();
 }
 function resetQuiz(){renderQuiz(quizSec);const b=document.getElementById('quizbox');if(b)window.scrollTo({top:b.getBoundingClientRect().top+window.scrollY-70,behavior:'smooth'});}
 
 /* ==================== ДАШБОРД (главная) ==================== */
 function pillarStats(){
-  const totalSec=Object.keys(COURSE.sections).length;
-  const readSec=Object.keys(COURSE.sections).filter(n=>isRead('sec'+n)).length;
+  const secNums=Object.keys(COURSE.sections);
+  const totalSec=secNums.length;
+  const passed=secNums.filter(n=>secPassed(n)).length;
+  const courseKnow=totalSec?secNums.reduce((a,n)=>a+secFrac(n),0)/totalSec:0;
   const lvlsDone=LEVELS.filter(l=>{const b=bestStore()[l.id];return b&&b.complete;}).length;
   const s=srStore(); let mastery=0;
   Q.forEach((c,i)=>{const cs=s[i];if(cs)mastery+=Math.max(0,Math.min(1,(cs.interval||0)/7));});
   const idx=Q.map((c,i)=>i);
-  return {totalSec,readSec,courseFrac:totalSec?readSec/totalSec:0,
+  return {totalSec,passed,courseFrac:totalSec?passed/totalSec:0,courseKnow,
           lvlsDone,buildFrac:lvlsDone/LEVELS.length,
           cardsFrac:Q.length?mastery/Q.length:0,
           dueNow:idx.filter(isDue).length,seen:idx.filter(i=>!isNew(i)).length};
 }
 function renderDashboard(){
   const st=pillarStats();
-  const readiness=Math.round(100*(0.35*st.courseFrac+0.30*st.buildFrac+0.35*st.cardsFrac));
+  const readiness=Math.round(100*(0.35*st.courseKnow+0.30*st.buildFrac+0.35*st.cardsFrac));
   let label,sub;
   if(readiness<25){label='Старт';sub='Только начинаешь. Пройди первые разделы курса и собери скелет схемы по памяти.';}
   else if(readiness<55){label='Разогрев';sub='База набирается. Дожимай карточки на повторе и наращивай схему по уровням.';}
   else if(readiness<80){label='Уверенно';sub='Хорошая форма. Закрывай слабые разделы и гоняй полную схему без подсказок.';}
   else{label='Готова';sub='Ты почти у цели. Держи карточки на повторе и прогоняй сценарии звонков и E2EE на карте.';}
-  const weak=[['курс',st.courseFrac,'course'],['схему',st.buildFrac,'build'],['карточки',st.cardsFrac,'cards']].sort((a,b)=>a[1]-b[1])[0];
+  const weak=[['курс',st.courseKnow,'course'],['схему',st.buildFrac,'build'],['карточки',st.cardsFrac,'cards']].sort((a,b)=>a[1]-b[1])[0];
   document.getElementById('hero').innerHTML=`
     <div class="ring" style="--p:${readiness}"><div class="hole"><b>${readiness}</b><small>ГОТОВНОСТЬ</small></div></div>
     <div class="meta">
@@ -927,10 +937,10 @@ function renderDashboard(){
       <p>${sub}</p>
       <div class="next"><button class="primary" onclick="goTab('${weak[2]}')">Заняться слабым местом: ${weak[0]} →</button></div>
     </div>`;
-  const nextSec=courseOrder().find(x=>x.type==='sec'&&!isRead('sec'+x.key));
+  const nextSec=courseOrder().find(x=>x.type==='sec'&&!secPassed(x.key));
   const pillars=[
-    {cls:'k-course',ic:'📖',t:'Курс',frac:st.courseFrac,big:`<b>${st.readSec}</b> / ${st.totalSec} разделов прочитано`,
-     btn:nextSec?'Продолжить чтение →':'Перечитать курс →',act:'continueCourse()',prim:false},
+    {cls:'k-course',ic:'📖',t:'Курс',frac:st.courseKnow,big:`<b>${st.passed}</b> / ${st.totalSec} разделов пройдено`,
+     btn:nextSec?'Продолжить курс →':'Перечитать курс →',act:'continueCourse()',prim:false},
     {cls:'k-build',ic:'🧩',t:'Схема',frac:st.buildFrac,big:`<b>${st.lvlsDone}</b> / ${LEVELS.length} уровней собрано`,
      btn:'Тренировать сборку →',act:"goTab('build')",prim:false},
     {cls:'k-cards',ic:'🃏',t:'Карточки',frac:st.cardsFrac,
@@ -946,13 +956,13 @@ function renderDashboard(){
       <button class="${p.prim?'primary':''}" onclick="${p.act}">${p.btn}</button>
     </div>`).join('');
 }
-function continueCourse(){const nx=courseOrder().find(x=>x.type==='sec'&&!isRead('sec'+x.key))||courseOrder()[0];goTab('course');openDoc(nx.type,nx.key);}
+function continueCourse(){const nx=courseOrder().find(x=>x.type==='sec'&&!secPassed(x.key))||courseOrder()[0];goTab('course');openDoc(nx.type,nx.key);}
 function startCards(){goTab('cards');document.getElementById('btnStudy').click();}
 function resetAll(){
   if(!confirm('Сбросить ВЕСЬ прогресс — пройденные разделы курса, собранные уровни схемы и карточки? Действие необратимо.'))return;
-  localStorage.removeItem(READ);localStorage.removeItem(SR);localStorage.removeItem(BSTORE);
+  localStorage.removeItem(READ);localStorage.removeItem(SR);localStorage.removeItem(BSTORE);localStorage.removeItem(TST);
   queue=[];qPos=0;secSel='all';curLevel=0;startLevel();renderCardsSide();renderToc();renderDashboard();
-  const rn=document.getElementById('rnav');if(rn&&curDoc)rn.innerHTML=navButtons(curDoc);
+  if(curDoc&&curDoc.startsWith('sec:'))renderQuiz(curDoc.slice(4));
   alert('Прогресс сброшен.');
 }
 
