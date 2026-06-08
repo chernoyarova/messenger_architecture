@@ -9,17 +9,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0b0e14; --bg2:#10151f; --panel:#131927; --line:#26304a; --line2:#1b2335;
-    --ink:#e9eef8; --muted:#94a2bd; --muted2:#6b7790;
-    --client:#f4c95d; --edge:#5ec8f2; --core:#8b9bff; --store:#5ad19a; --scale:#ff944d; --push:#cf91f5; --rtc:#ff6f91;
-    --good:#5ad19a; --bad:#ff6f91;
+    --bg:#eef1f6; --bg2:#e7ebf3; --panel:#ffffff; --line:#dde3ee; --line2:#eaeef5;
+    --ink:#1b2333; --muted:#5b6678; --muted2:#8b95a7;
+    --client:#c2890a; --edge:#2f6bff; --core:#5b63e6; --store:#16a06a; --scale:#e0701c; --push:#9b46e8; --rtc:#e6397a;
+    --good:#16a06a; --bad:#e6397a;
   }
   *{box-sizing:border-box;}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:'Archivo',system-ui,sans-serif;}
   .wrap{max-width:1240px;margin:0 auto;padding:0 16px 60px;}
 
   header.top{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
-    padding:11px 0;margin-bottom:20px;background:rgba(11,14,20,.85);backdrop-filter:blur(9px);border-bottom:1px solid var(--line2);}
+    padding:11px 0;margin-bottom:20px;background:rgba(238,241,246,.82);backdrop-filter:blur(9px);border-bottom:1px solid var(--line);}
   .brand{display:flex;align-items:center;gap:9px;}
   .brand .dot{width:11px;height:11px;border-radius:3px;background:var(--edge);box-shadow:0 0 9px var(--edge);}
   .brand h1{font-size:16px;font-weight:800;letter-spacing:-.2px;margin:0;white-space:nowrap;}
@@ -28,14 +28,15 @@
   .tabs{display:flex;gap:5px;flex-wrap:wrap;}
   .tab{font-weight:600;font-size:13.5px;color:var(--muted);background:transparent;border:1px solid transparent;border-radius:9px;padding:7px 13px;cursor:pointer;transition:.15s;}
   .tab:hover{color:#fff;background:var(--bg2);}
-  .tab.on{color:#08111c;background:var(--edge);font-weight:700;}
+  .tab.on{color:#fff;background:var(--edge);font-weight:700;}
   .view{display:none;}
   .view.on{display:block;}
 
   button{font-family:'Archivo',sans-serif;font-weight:600;font-size:13px;color:var(--ink);background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:8px 14px;cursor:pointer;transition:.15s;}
   button:hover{border-color:var(--edge);color:#fff;}
   button:disabled{opacity:.35;cursor:default;}
-  button.primary{background:var(--edge);color:#08111c;border-color:var(--edge);font-weight:700;}
+  button.primary{background:var(--edge);color:#fff;border-color:var(--edge);font-weight:700;}
+  button.primary:hover{filter:brightness(1.06);color:#fff;}
   button.ghost{background:transparent;color:var(--muted);}
 
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;}
@@ -65,22 +66,22 @@
 
   .buildgrid{display:grid;grid-template-columns:1fr 290px;gap:14px;}
   @media(max-width:920px){.buildgrid{grid-template-columns:1fr;}}
-  .board{background:#0c111c;background-image:linear-gradient(#161d2e 1px,transparent 1px),linear-gradient(90deg,#161d2e 1px,transparent 1px);background-size:30px 30px;border:1px solid var(--line);border-radius:14px;padding:8px;position:relative;overflow:hidden;}
+  .board{background:#fbfcfe;background-image:linear-gradient(#eef1f7 1px,transparent 1px),linear-gradient(90deg,#eef1f7 1px,transparent 1px);background-size:30px 30px;border:1px solid var(--line);border-radius:14px;padding:8px;position:relative;overflow:hidden;}
   svg.boardsvg{width:100%;height:auto;display:block;touch-action:manipulation;}
 
   .slot{cursor:pointer;}
-  .slot rect.box{fill:#0d1422;stroke-dasharray:5 4;stroke-width:1.5;}
-  .slot:hover rect.box{fill:#152033;}
-  .slot.armed rect.box{fill:#16243a;stroke-dasharray:none;stroke-width:2.4;}
+  .slot rect.box{fill:#f4f7fc;stroke-dasharray:5 4;stroke-width:1.5;}
+  .slot:hover rect.box{fill:#e9eff8;}
+  .slot.armed rect.box{fill:#e3ecfb;stroke-dasharray:none;stroke-width:2.4;}
   .slot text.hint{font-family:'Space Mono',monospace;font-size:9.5px;fill:var(--muted2);}
-  .slot text.qm{font-family:'Archivo';font-weight:900;font-size:18px;fill:var(--muted2);}
-  .slot.bad rect.box{fill:#2a1622;stroke:var(--bad)!important;}
+  .slot text.qm{font-family:'Archivo';font-weight:900;font-size:18px;fill:#c2cad8;}
+  .slot.bad rect.box{fill:#fdeaf0;stroke:var(--bad)!important;}
 
   .pnode{cursor:pointer;}
-  .pnode rect.box{stroke-width:2;}
+  .pnode rect.box{stroke-width:2;fill:#fff;}
   .pnode text.lbl{font-family:'Archivo';font-weight:700;font-size:12px;fill:var(--ink);pointer-events:none;}
   .pnode text.sub{font-family:'Space Mono',monospace;font-size:8.5px;fill:var(--muted);pointer-events:none;}
-  .pnode.pick rect.box{stroke:#fff;stroke-width:3.4;filter:drop-shadow(0 0 7px #fff);}
+  .pnode.pick rect.box{stroke:var(--ink);stroke-width:3.2;filter:drop-shadow(0 0 5px rgba(0,0,0,.2));}
   .pnode.miss rect.box{stroke-dasharray:4 3;}
   .pnode.hintnode rect.box{filter:drop-shadow(0 0 8px currentColor);stroke-width:3.4;}
   .glink{stroke-width:2.4;fill:none;}
@@ -92,12 +93,12 @@
   .palette h3{font-size:11px;letter-spacing:.6px;text-transform:uppercase;font-weight:700;color:var(--muted2);margin:0 0 10px;}
   .chip{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:var(--bg2);border:1px solid var(--line);border-left-width:4px;border-radius:9px;padding:8px 10px;margin-bottom:7px;cursor:pointer;transition:.12s;}
   .chip:hover{border-color:var(--edge);}
-  .chip.pick{background:#16243a;border-color:#fff;}
+  .chip.pick{background:#e3ecfb;border-color:var(--edge);}
   .chip .nm{font-size:13px;font-weight:700;}
   .chip .sb{display:block;font-weight:400;color:var(--muted);font-size:11px;margin-top:1px;}
   .palette .empty{color:var(--muted2);font-size:13px;line-height:1.5;padding:8px 0;}
 
-  .done-banner{background:#11251a;border:1px solid var(--good);color:var(--good);border-radius:10px;padding:12px 14px;margin-top:12px;font-weight:600;display:none;}
+  .done-banner{background:#eafaf1;border:1px solid var(--good);color:#0f7a4a;border-radius:10px;padding:12px 14px;margin-top:12px;font-weight:600;display:none;}
   .done-banner.show{display:block;}
   details.legend{margin-top:12px;}
   details.legend summary{font-size:11.5px;color:var(--muted2);cursor:pointer;list-style:none;user-select:none;}
@@ -122,10 +123,11 @@
   .flash .actions{margin-top:18px;}
   .grades{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
   .grades button{padding:11px 4px;font-size:13px;text-align:center;}
-  .g-again{border-color:#5a2a38;color:#ff9bb0;}
-  .g-hard{border-color:#5a4520;color:#f4c95d;}
-  .g-good{border-color:#2a5a40;color:#7fe0ad;}
-  .g-easy{border-color:#2a4a5a;color:#8fd6f2;}
+  .g-again{border-color:#f0c2cf;color:#c2295a;}
+  .g-hard{border-color:#efd9a8;color:#9a6b00;}
+  .g-good{border-color:#bce4cd;color:#0f7a4a;}
+  .g-easy{border-color:#bcd9f0;color:#1364a6;}
+  .grades button:hover{filter:brightness(.97);}
   .grades button small{display:block;font-family:'Space Mono',monospace;font-size:9px;opacity:.7;margin-top:2px;font-weight:400;}
 
   .sidecard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;}
@@ -143,24 +145,87 @@
   .emptyq{text-align:center;color:var(--muted);padding:40px 10px;}
   .emptyq b{color:var(--good);display:block;font-size:18px;margin-bottom:6px;}
 
-  iframe.map{width:100%;height:78vh;border:1px solid var(--line);border-radius:14px;background:#0b0e14;}
   .note{color:var(--muted2);font-size:12px;margin-top:8px;}
-  a.lnk{color:var(--edge);text-decoration:none;}
-  a.lnk:hover{text-decoration:underline;}
+  a.lnk{color:var(--edge);text-decoration:none;} a.lnk:hover{text-decoration:underline;}
 
-  /* ====== HUB ====== */
-  .hub{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
-  @media(max-width:760px){.hub{grid-template-columns:1fr;}}
-  .hubcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;cursor:pointer;transition:.16s;position:relative;overflow:hidden;}
-  .hubcard:hover{border-color:var(--edge);transform:translateY(-2px);}
-  .hubcard .ic{font-size:30px;line-height:1;}
-  .hubcard h2{margin:12px 0 6px;font-size:20px;font-weight:800;}
-  .hubcard p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.5;}
-  .hubcard .prog{margin-top:14px;font-size:12.5px;color:var(--edge);font-weight:600;}
-  .hubcard .bar{height:6px;background:var(--bg2);border-radius:4px;margin-top:7px;overflow:hidden;}
-  .hubcard .bar i{display:block;height:100%;background:var(--edge);border-radius:4px;transition:.4s;}
-  .hubhint{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--edge);border-radius:12px;padding:14px 16px;margin-bottom:16px;color:var(--muted);font-size:13.5px;line-height:1.55;}
-  .hubhint b{color:var(--ink);}
+  /* ====== DASHBOARD ====== */
+  .hero{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px 26px;display:flex;gap:26px;align-items:center;flex-wrap:wrap;margin-bottom:16px;box-shadow:0 1px 2px rgba(20,30,55,.04);}
+  .ring{position:relative;width:138px;height:138px;border-radius:50%;flex:none;
+    background:conic-gradient(var(--edge) calc(var(--p,0)*3.6deg), var(--bg2) 0);}
+  .ring .hole{position:absolute;inset:13px;background:var(--panel);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .ring .hole b{font-size:40px;font-weight:900;line-height:1;color:var(--ink);}
+  .ring .hole small{font-size:12px;color:var(--muted2);margin-top:3px;letter-spacing:.5px;}
+  .hero .meta{flex:1;min-width:230px;}
+  .hero .meta .lvlbadge{display:inline-block;font-size:12px;font-weight:700;color:var(--edge);background:#e9f0ff;border:1px solid #cfe0ff;border-radius:20px;padding:4px 12px;margin-bottom:10px;}
+  .hero .meta h2{margin:0 0 6px;font-size:24px;font-weight:900;letter-spacing:-.3px;}
+  .hero .meta p{margin:0;color:var(--muted);font-size:14px;line-height:1.5;}
+  .hero .meta .next{margin-top:14px;}
+
+  .pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  @media(max-width:780px){.pillars{grid-template-columns:1fr;}}
+  .pcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(20,30,55,.04);}
+  .pcard .ic{font-size:24px;line-height:1;}
+  .pcard h3{margin:10px 0 3px;font-size:17px;font-weight:800;}
+  .pcard .big{font-size:13px;color:var(--muted);margin:0 0 12px;}
+  .pcard .big b{color:var(--ink);font-weight:800;font-size:15px;}
+  .pcard .bar{height:8px;background:var(--bg2);border-radius:5px;overflow:hidden;margin-bottom:14px;}
+  .pcard .bar i{display:block;height:100%;border-radius:5px;transition:.45s;}
+  .pcard.k-course .bar i{background:var(--core);} .pcard.k-build .bar i{background:var(--client);} .pcard.k-cards .bar i{background:var(--store);}
+  .pcard .spacer{flex:1;}
+  .pcard button{width:100%;}
+
+  /* ====== MAP (native) ====== */
+  .mapgrid{display:grid;grid-template-columns:1fr 332px;gap:14px;align-items:start;}
+  @media(max-width:980px){.mapgrid{grid-template-columns:1fr;}}
+  .mapboard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px;box-shadow:0 1px 2px rgba(20,30,55,.04);}
+  svg#mapSvg{width:100%;height:auto;display:block;}
+  .mapside{position:sticky;top:76px;display:flex;flex-direction:column;gap:12px;}
+  @media(max-width:980px){.mapside{position:static;}}
+  .scnpick{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .scnpick .lab{flex:none;}
+  .scnSelect{flex:1;min-width:150px;appearance:none;background:var(--bg2);border:1px solid var(--line);color:var(--ink);font-family:'Archivo';font-weight:600;font-size:13px;border-radius:9px;padding:8px 28px 8px 11px;cursor:pointer;
+    background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 15px) 16px,calc(100% - 10px) 16px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;}
+  .mappanel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;min-height:150px;box-shadow:0 1px 2px rgba(20,30,55,.04);}
+  .mappanel .tag{font-size:11px;letter-spacing:.6px;text-transform:uppercase;font-weight:700;color:var(--muted2);}
+  .mappanel h3{margin:7px 0 3px;font-size:18px;font-weight:800;}
+  .mappanel .secref{font-size:12px;color:var(--edge);font-weight:600;margin-bottom:12px;}
+  .mappanel .row{margin:11px 0;}
+  .mappanel .row b{display:block;font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted2);font-weight:700;margin-bottom:3px;}
+  .mappanel .row span{font-size:13.5px;line-height:1.5;color:var(--ink);}
+  .mappanel .hint{color:var(--muted);font-size:13px;line-height:1.55;}
+  .capbar{margin-top:12px;background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--edge);border-radius:10px;padding:12px 14px;font-size:13.5px;line-height:1.5;color:var(--ink);display:none;}
+  .capbar.show{display:block;}
+  .capbar.rtc{border-left-color:var(--rtc);}
+  .capbar .cstep{display:block;font-family:'Space Mono',monospace;font-size:11px;color:var(--edge);letter-spacing:.5px;margin-bottom:5px;}
+  .capbar.rtc .cstep{color:var(--rtc);}
+  .capnav{display:flex;gap:8px;align-items:center;margin-top:11px;}
+  .capnav .sn{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted2);min-width:46px;text-align:center;}
+
+  /* map node/link visuals */
+  .node{cursor:pointer;} .node text{pointer-events:none;}
+  .node .label{font-weight:700;font-size:13px;fill:var(--ink);}
+  .node .sub{font-family:'Space Mono',monospace;font-size:9.5px;fill:var(--muted);}
+  .node .tech{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;fill:currentColor;opacity:.95;letter-spacing:.2px;}
+  .node .shape{transition:.18s;} .node .lid{transition:.18s;}
+  .node .qline{stroke:currentColor;opacity:.3;stroke-width:1.4;}
+  .node .titlebar{opacity:.9;}
+  .node:hover .shape{filter:brightness(.96);}
+  .node.isnew .shape{stroke-dasharray:4 3;}
+  .node.dim{opacity:.34;}
+  .node.hl .shape{stroke-width:3;}
+  .node.active .shape{stroke-width:3.2;filter:drop-shadow(0 0 4px currentColor);}
+  .node.active.act-rtc .shape{filter:drop-shadow(0 0 6px var(--rtc));}
+  .node.sel .shape{stroke:var(--ink);stroke-width:3.2;filter:drop-shadow(0 0 5px rgba(0,0,0,.18));}
+  .link{stroke:#b3bdd2;stroke-width:2;fill:none;transition:.18s;}
+  .link.dashed{stroke-dasharray:5 5;stroke:#c6cedd;}
+  .link.rtc{stroke:var(--rtc);stroke-dasharray:6 6;opacity:.5;}
+  .link.active{stroke:var(--ink);stroke-width:3;}
+  .link.statusline{stroke:var(--client);}
+  .link.rtcline{stroke:var(--rtc);stroke-width:3;opacity:1;}
+  .link.dim{opacity:.16;}
+  .planelabel{fill:var(--muted2);font-family:'Space Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;}
+  .planediv{stroke:var(--line);stroke-dasharray:2 9;stroke-width:1.4;}
+  .servlabel{fill:var(--muted2);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;}
 
   /* ====== COURSE ====== */
   .coursegrid{display:grid;grid-template-columns:300px 1fr;gap:14px;align-items:start;}
@@ -170,7 +235,7 @@
   .toc .part:first-child{margin-top:2px;}
   .toc .ti{display:flex;gap:9px;align-items:flex-start;width:100%;text-align:left;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:5px;cursor:pointer;transition:.12s;}
   .toc .ti:hover{border-color:var(--edge);}
-  .toc .ti.on{border-color:var(--edge);background:#16243a;}
+  .toc .ti.on{border-color:var(--edge);background:#e9f0ff;}
   .toc .ti .n{font-size:12px;font-weight:700;color:var(--edge);min-width:20px;}
   .toc .ti.read{opacity:.62;}
   .toc .ti.read .n::after{content:' ✓';color:var(--store);}
@@ -179,15 +244,15 @@
   .reader{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px 32px;min-height:300px;}
   .reader .rmeta{font-size:11px;letter-spacing:.6px;color:var(--muted2);text-transform:uppercase;font-weight:700;margin-bottom:6px;}
   .reader h1.rt{font-size:26px;font-weight:900;margin:0 0 18px;line-height:1.15;max-width:30ch;}
-  .md{font-size:15.5px;line-height:1.68;color:#dde4f2;max-width:72ch;}
+  .md{font-size:15.5px;line-height:1.68;color:#2c3547;max-width:72ch;}
   .md h2{font-size:19px;font-weight:800;margin:26px 0 10px;color:var(--ink);border-bottom:1px solid var(--line2);padding-bottom:6px;}
   .md h3{font-size:16px;font-weight:700;margin:20px 0 8px;color:var(--ink);}
   .md h4{font-size:14px;font-weight:700;margin:16px 0 6px;color:var(--muted);}
   .md p{margin:10px 0;} .md ul,.md ol{margin:10px 0;padding-left:22px;} .md li{margin:5px 0;}
-  .md strong{color:#fff;font-weight:700;}
+  .md strong{color:var(--ink);font-weight:700;}
   .md code{font-family:'Space Mono',monospace;font-size:13px;background:var(--bg2);border:1px solid var(--line);border-radius:5px;padding:1px 5px;color:var(--edge);}
   .md pre{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto;margin:14px 0;}
-  .md pre code{background:none;border:none;padding:0;color:#bcd0ee;font-size:12.5px;line-height:1.5;}
+  .md pre code{background:none;border:none;padding:0;color:#334155;font-size:12.5px;line-height:1.5;}
   .md blockquote{border-left:3px solid var(--edge);margin:12px 0;padding:4px 14px;color:var(--muted);background:var(--bg2);border-radius:0 8px 8px 0;}
   .md table{border-collapse:collapse;margin:14px 0;width:100%;font-size:13.5px;}
   .md th,.md td{border:1px solid var(--line);padding:7px 10px;text-align:left;}
@@ -210,10 +275,10 @@
     </nav>
   </header>
 
-  <!-- ============ HOME ============ -->
+  <!-- ============ HOME (DASHBOARD) ============ -->
   <section class="view on" id="view-home">
-    <div class="hubhint">С чего начать: пройди <b>Курс</b> по разделам, по ходу собирай <b>схему</b> по памяти, а выученное закрепляй <b>карточками</b> с интервальными повторами. Возвращайся сюда как на карту прогресса.</div>
-    <div class="hub" id="hub"></div>
+    <div class="hero" id="hero"></div>
+    <div class="pillars" id="pillars"></div>
   </section>
 
   <!-- ============ COURSE ============ -->
@@ -292,16 +357,46 @@
     </div>
   </section>
 
-  <!-- ============ MAP ============ -->
+  <!-- ============ MAP (native) ============ -->
   <section class="view" id="view-map">
-    <iframe class="map" src="view.html" title="Карта архитектуры"></iframe>
-    <div class="note">Это твоя интерактивная схема (view.html) со сценариями. Клик по узлу — что это и зачем; внизу — пошаговые прогоны.</div>
+    <div class="mapgrid">
+      <div>
+        <div class="mapboard">
+          <svg id="mapSvg" viewBox="0 0 1080 700" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="marrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L7,3 L0,6 Z" fill="#aab4c9"/></marker>
+              <marker id="marrowA" markerWidth="10" markerHeight="10" refX="7" refY="3.2" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L7,3.2 L0,6.4 Z" fill="#1b2333"/></marker>
+            </defs>
+            <g id="mplanes">
+              <text class="servlabel" x="30" y="128">сервисные узлы · опора доставки и синхронизации</text>
+              <line class="planediv" x1="20" y1="524" x2="1060" y2="524"/>
+              <text class="planelabel" x="30" y="546">плоскость медиа · RTC — реал-тайм-тракт звонков</text>
+            </g>
+            <g id="mlinks"></g>
+            <g id="mnodes"></g>
+          </svg>
+        </div>
+        <div class="capbar" id="mcap"><span class="cstep" id="mcapStep"></span><span id="mcapText"></span>
+          <div class="capnav"><button class="ghost" id="mPrev">‹ Назад</button><span class="sn" id="mStepNo"></span><button class="ghost" id="mNext">Дальше ›</button></div>
+        </div>
+        <details class="legend"><summary>Цвета слоёв и фигуры</summary><div class="legendrow" id="mlegend"></div></details>
+      </div>
+      <aside class="mapside">
+        <div class="scnpick">
+          <span class="lab">Сценарий</span>
+          <select class="scnSelect" id="scnSelect"></select>
+          <button class="ghost iconbtn" id="mReset" title="Сбросить">↺</button>
+        </div>
+        <div class="mappanel" id="mpanel"></div>
+      </aside>
+    </div>
   </section>
 </div>
 
 <script src="marked.min.js"></script>
 <script src="questions.js"></script>
 <script src="course.js"></script>
+<script src="mapdata.js"></script>
 <script>
 /* ==================== ДАННЫЕ СХЕМЫ ==================== */
 const NODES = {
@@ -355,7 +450,7 @@ function goTab(name){
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   document.getElementById('view-'+name).classList.add('on');
   if(name==='cards') renderCardsSide();
-  if(name==='home') renderHub();
+  if(name==='home') renderDashboard();
   if(name==='course') renderToc();
   window.scrollTo(0,0);
 }
@@ -433,7 +528,7 @@ function renderBoard(){
 function drawPlaced(id){
   const n=NODES[id], col=LAYERS[n.layer].c;
   const g=el('g',{class:'pnode'}); g.dataset.id=id; g.style.color=col;
-  g.appendChild(el('rect',{class:'box',x:n.x,y:n.y,width:n.w,height:n.h,rx:11,fill:'#111726',stroke:col}));
+  g.appendChild(el('rect',{class:'box',x:n.x,y:n.y,width:n.w,height:n.h,rx:11,fill:'#fff',stroke:col}));
   const t1=el('text',{class:'lbl',x:n.x+10,y:n.y+24});t1.textContent=n.label;g.appendChild(t1);
   const t2=el('text',{class:'sub',x:n.x+10,y:n.y+40});t2.textContent=n.sub;g.appendChild(t2);
   g.onclick=()=>onNodeClick(id,g);
@@ -736,38 +831,139 @@ function openRef(id){
 }
 function studySection(n){secSel=String(n);goTab('cards');document.getElementById('secFilter').value=secSel;renderCardsSide();document.getElementById('btnStudy').click();}
 
-/* ==================== ХАБ (главная) ==================== */
-function renderHub(){
+/* ==================== ДАШБОРД (главная) ==================== */
+function pillarStats(){
   const totalSec=Object.keys(COURSE.sections).length;
   const readSec=Object.keys(COURSE.sections).filter(n=>isRead('sec'+n)).length;
   const lvlsDone=LEVELS.filter(l=>{const b=bestStore()[l.id];return b&&b.complete;}).length;
-  const allIdx=Q.map((c,i)=>i);
-  const dueNow=allIdx.filter(isDue).length;
-  const seen=allIdx.filter(i=>!isNew(i)).length;
-  const cards=[
-    {cls:'c-course',ic:'📖',t:'Курс',view:'course',
-     p:'22 раздела по порядку: от «чем мессенджер отличается от веб-сервиса» до группового E2EE и звонков. Плюс справка по сетям.',
-     prog:`Прочитано ${readSec} / ${totalSec} разделов`,frac:readSec/totalSec},
-    {cls:'c-build',ic:'🧩',t:'Собери схему',view:'build',
-     p:'Восстанови архитектуру по памяти: расставь блоки и проведи связи. 7 уровней — от скелета до полной схемы со звонками.',
-     prog:`Собрано уровней ${lvlsDone} / ${LEVELS.length}`,frac:lvlsDone/LEVELS.length},
-    {cls:'c-cards',ic:'🃏',t:'Карточки',view:'cards',
-     p:'67 вопросов интервьюера с интервальными повторами. Отвечай вслух, потом сверяйся — тренируется воспроизведение, а не узнавание.',
-     prog:`К повтору сейчас: ${dueNow} · изучено ${seen} / ${Q.length}`,frac:seen/Q.length},
-    {cls:'c-map',ic:'🗺️',t:'Карта',view:'map',
-     p:'Интерактивная схема со всеми узлами и 15 пошаговыми сценариями: онлайн/офлайн-доставка, догон, группы, звонки, E2EE.',
-     prog:`20 узлов · 15 сценариев`,frac:null},
+  const s=srStore(); let mastery=0;
+  Q.forEach((c,i)=>{const cs=s[i];if(cs)mastery+=Math.max(0,Math.min(1,(cs.interval||0)/7));});
+  const idx=Q.map((c,i)=>i);
+  return {totalSec,readSec,courseFrac:totalSec?readSec/totalSec:0,
+          lvlsDone,buildFrac:lvlsDone/LEVELS.length,
+          cardsFrac:Q.length?mastery/Q.length:0,
+          dueNow:idx.filter(isDue).length,seen:idx.filter(i=>!isNew(i)).length};
+}
+function renderDashboard(){
+  const st=pillarStats();
+  const readiness=Math.round(100*(0.35*st.courseFrac+0.30*st.buildFrac+0.35*st.cardsFrac));
+  let label,sub;
+  if(readiness<25){label='Старт';sub='Только начинаешь. Пройди первые разделы курса и собери скелет схемы по памяти.';}
+  else if(readiness<55){label='Разогрев';sub='База набирается. Дожимай карточки на повторе и наращивай схему по уровням.';}
+  else if(readiness<80){label='Уверенно';sub='Хорошая форма. Закрывай слабые разделы и гоняй полную схему без подсказок.';}
+  else{label='Готова';sub='Ты почти у цели. Держи карточки на повторе и прогоняй сценарии звонков и E2EE на карте.';}
+  const weak=[['курс',st.courseFrac,'course'],['схему',st.buildFrac,'build'],['карточки',st.cardsFrac,'cards']].sort((a,b)=>a[1]-b[1])[0];
+  document.getElementById('hero').innerHTML=`
+    <div class="ring" style="--p:${readiness}"><div class="hole"><b>${readiness}</b><small>ГОТОВНОСТЬ</small></div></div>
+    <div class="meta">
+      <span class="lvlbadge">${label}</span>
+      <h2>Готовность к интервью</h2>
+      <p>${sub}</p>
+      <div class="next"><button class="primary" onclick="goTab('${weak[2]}')">Заняться слабым местом: ${weak[0]} →</button></div>
+    </div>`;
+  const nextSec=courseOrder().find(x=>x.type==='sec'&&!isRead('sec'+x.key));
+  const pillars=[
+    {cls:'k-course',ic:'📖',t:'Курс',frac:st.courseFrac,big:`<b>${st.readSec}</b> / ${st.totalSec} разделов прочитано`,
+     btn:nextSec?'Продолжить чтение →':'Перечитать курс →',act:'continueCourse()',prim:false},
+    {cls:'k-build',ic:'🧩',t:'Схема',frac:st.buildFrac,big:`<b>${st.lvlsDone}</b> / ${LEVELS.length} уровней собрано`,
+     btn:'Тренировать сборку →',act:"goTab('build')",prim:false},
+    {cls:'k-cards',ic:'🃏',t:'Карточки',frac:st.cardsFrac,
+     big:st.dueNow?`<b>${st.dueNow}</b> к повтору · ${st.seen}/${Q.length} изучено`:`<b>${st.seen}</b> / ${Q.length} изучено`,
+     btn:st.dueNow?`Повторить ${st.dueNow} →`:'Учить карточки →',act:'startCards()',prim:st.dueNow>0},
   ];
-  document.getElementById('hub').innerHTML=cards.map(c=>`
-    <div class="hubcard ${c.cls}" onclick="goTab('${c.view}')">
-      <div class="ic">${c.ic}</div><h2>${c.t}</h2><p>${c.p}</p>
-      <div class="prog">${c.prog}</div>
-      ${c.frac!==null?`<div class="bar"><i style="width:${Math.round(c.frac*100)}%"></i></div>`:''}
+  document.getElementById('pillars').innerHTML=pillars.map(p=>`
+    <div class="pcard ${p.cls}">
+      <div class="ic">${p.ic}</div><h3>${p.t}</h3>
+      <div class="big">${p.big}</div>
+      <div class="bar"><i style="width:${Math.round(p.frac*100)}%"></i></div>
+      <div class="spacer"></div>
+      <button class="${p.prim?'primary':''}" onclick="${p.act}">${p.btn}</button>
     </div>`).join('');
 }
+function continueCourse(){const nx=courseOrder().find(x=>x.type==='sec'&&!isRead('sec'+x.key))||courseOrder()[0];goTab('course');openDoc(nx.type,nx.key);}
+function startCards(){goTab('cards');document.getElementById('btnStudy').click();}
+
+/* ==================== КАРТА (нативная) ==================== */
+(function(){
+  const MD=window.MAPDATA; if(!MD) return;
+  const N=MD.NODES,L=MD.LINKS,INFO=MD.INFO,SCN=MD.SCENARIOS,CATS=MD.CAT_ORDER,LN=MD.LAYER_NAME;
+  const LV={client:'--client',edge:'--edge',core:'--core',store:'--store',scale:'--scale',push:'--push',rtc:'--rtc'};
+  const svgm=document.getElementById('mapSvg');
+  const linksG=document.getElementById('mlinks'),nodesG=document.getElementById('mnodes'),panel=document.getElementById('mpanel');
+  const cap=document.getElementById('mcap'),capStep=document.getElementById('mcapStep'),capText=document.getElementById('mcapText'),stepNo=document.getElementById('mStepNo');
+  const btnPrev=document.getElementById('mPrev'),btnNext=document.getElementById('mNext'),sel=document.getElementById('scnSelect');
+  const linkEls={},nodeEls={}; let curScn=null,stepIdx=0,mode=null;
+  function anchor(id,side,t){const n=N[id];t=(t===undefined)?.5:t;
+    if(side==='L')return[n.x,n.y+n.h*t];if(side==='R')return[n.x+n.w,n.y+n.h*t];
+    if(side==='T')return[n.x+n.w*t,n.y];return[n.x+n.w*t,n.y+n.h];}
+  function cyl(x,y,w,h,ry){const rx=w/2,t=y+ry,b=y+h-ry;return `M${x},${t} L${x},${b} A${rx},${ry} 0 0 0 ${x+w},${b} L${x+w},${t} A${rx},${ry} 0 0 1 ${x},${t} Z`;}
+  L.forEach(l=>{
+    const[ax,ay]=anchor(...l.a),[bx,by]=anchor(...l.b);
+    const cls='link'+(l.dashed?' dashed':'')+(l.rtc?' rtc':'');
+    const p=l.cp?el('path',{d:`M${ax},${ay} Q${l.cp[0]},${l.cp[1]} ${bx},${by}`,class:cls,'marker-end':'url(#marrow)'})
+                :el('line',{x1:ax,y1:ay,x2:bx,y2:by,class:cls,'marker-end':'url(#marrow)'});
+    linkEls[l.id]=p;linksG.appendChild(p);
+  });
+  for(const id in N){
+    const n=N[id],shape=n.shape||'rect',col=`var(${LV[n.layer]})`;
+    const g=el('g',{class:'node'+(n.isnew?' isnew':'')});g.dataset.id=id;g.style.color=col;let shiftY=0;
+    if(shape==='cyl'){const ry=Math.min(8,n.h*0.16);
+      g.appendChild(el('path',{d:cyl(n.x,n.y,n.w,n.h,ry),class:'shape',fill:'#fff',stroke:col,'stroke-width':1.6}));
+      g.appendChild(el('ellipse',{cx:n.x+n.w/2,cy:n.y+ry,rx:n.w/2,ry:ry,class:'lid',fill:'#eef2f9',stroke:col,'stroke-width':1.6}));shiftY=-2;
+    }else if(shape==='queue'){
+      g.appendChild(el('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:11,class:'shape',fill:'#fff',stroke:col,'stroke-width':1.6}));
+      [0.32,0.5,0.68].forEach(f=>{const lx=n.x+n.w*f;g.appendChild(el('line',{x1:lx,y1:n.y+9,x2:lx,y2:n.y+n.h-9,class:'qline'}));});
+    }else{
+      g.appendChild(el('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:11,class:'shape',fill:'#fff',stroke:col,'stroke-width':1.6}));
+      if(n.layer==='client')g.appendChild(el('rect',{x:n.x+9,y:n.y+5,width:n.w-18,height:4,rx:2,class:'titlebar',fill:col}));
+    }
+    const cy=n.y+n.h/2+shiftY;
+    const t1=el('text',{x:n.x+n.w/2,y:cy-9,'text-anchor':'middle',class:'label'});t1.textContent=n.label;
+    const t2=el('text',{x:n.x+n.w/2,y:cy+5,'text-anchor':'middle',class:'sub'});t2.textContent=n.sub;
+    const t3=el('text',{x:n.x+n.w/2,y:cy+18,'text-anchor':'middle',class:'tech'});t3.textContent=n.tech;
+    g.appendChild(t1);g.appendChild(t2);g.appendChild(t3);
+    g.addEventListener('click',e=>{e.stopPropagation();selectNode(id);});
+    nodeEls[id]=g;nodesG.appendChild(g);
+  }
+  document.getElementById('mlegend').innerHTML=Object.keys(LV).map(k=>`<span><i style="background:var(${LV[k]})"></i>${LN[k]}</span>`).join('')+'<span>⬭ хранилище · ▥ очередь · ▔ клиент</span>';
+  let opts='<option value="">— выбери прогон —</option>';
+  CATS.forEach(cat=>{opts+=`<optgroup label="${cat}">`+SCN.filter(s=>s.cat===cat).map(s=>`<option value="${s.id}">${s.n}. ${s.title}</option>`).join('')+'</optgroup>';});
+  sel.innerHTML=opts;
+  sel.onchange=()=>{sel.value?startScenario(sel.value):fullReset();};
+  function clearC(){
+    for(const id in nodeEls)nodeEls[id].classList.remove('dim','hl','active','sel','act-status','act-rtc');
+    for(const id in linkEls){linkEls[id].classList.remove('dim','active','statusline','rtcline');linkEls[id].setAttribute('marker-end','url(#marrow)');}
+    cap.classList.remove('rtc');
+  }
+  function fullReset(){mode=null;curScn=null;stepIdx=0;clearC();cap.classList.remove('show');sel.value='';
+    panel.innerHTML=`<span class="tag">Подсказка</span><h3>Карта архитектуры</h3><p class="hint">Кликни по любому компоненту — что он делает и зачем. Или выбери <b>сценарий</b> выше и пройди его по шагам кнопкой «Дальше ›». Пунктирные узлы — сервисные надстройки; розовая зона внизу — медиа-тракт звонков (RTC).</p>`;}
+  function selectNode(id){mode='node';clearC();cap.classList.remove('show');sel.value='';
+    nodeEls[id].classList.add('sel');const n=N[id],i=INFO[id];
+    panel.innerHTML=`<span class="tag">${LN[n.layer]}</span><h3>${n.label}</h3><div class="secref">${i.sec}</div>
+      <div class="row"><b>Что делает</b><span>${i.what}</span></div>
+      <div class="row"><b>Зачем нужен</b><span>${i.why}</span></div>
+      <div class="row"><b>Технологии</b><span>${n.tech}</span></div>`;}
+  function startScenario(id){mode='scn';curScn=SCN.find(s=>s.id===id);stepIdx=0;clearC();cap.classList.add('show');
+    panel.innerHTML=`<span class="tag">${curScn.cat}</span><h3>${curScn.title}</h3><div class="secref">${curScn.sub}</div>
+      <div class="row"><b>Что показываем</b><span>${curScn.intro}</span></div>`;
+    renderStep();}
+  function renderStep(){const steps=curScn.steps,st=steps[stepIdx];
+    for(const id in nodeEls){nodeEls[id].classList.remove('hl','active','sel','act-status','act-rtc');nodeEls[id].classList.add('dim');}
+    for(const id in linkEls){linkEls[id].classList.remove('active','statusline','rtcline');linkEls[id].classList.add('dim');linkEls[id].setAttribute('marker-end','url(#marrow)');}
+    st.nodes.forEach(id=>{const e=nodeEls[id];if(!e)return;e.classList.remove('dim');e.classList.add('active');if(st.status)e.classList.add('act-status');if(st.rtc)e.classList.add('act-rtc');});
+    st.links.forEach(id=>{const l=linkEls[id];if(!l)return;l.classList.remove('dim');l.classList.add('active');if(st.status)l.classList.add('statusline');if(st.rtc)l.classList.add('rtcline');l.setAttribute('marker-end','url(#marrowA)');});
+    cap.classList.toggle('rtc',!!st.rtc);
+    capStep.textContent=`Шаг ${stepIdx+1} / ${steps.length}`;capText.textContent=st.cap;stepNo.textContent=`${stepIdx+1} / ${steps.length}`;
+    btnPrev.disabled=stepIdx===0;btnNext.disabled=stepIdx===steps.length-1;}
+  btnNext.onclick=()=>{if(curScn&&stepIdx<curScn.steps.length-1){stepIdx++;renderStep();}};
+  btnPrev.onclick=()=>{if(curScn&&stepIdx>0){stepIdx--;renderStep();}};
+  document.getElementById('mReset').onclick=fullReset;
+  svgm.addEventListener('click',()=>{if(mode==='node')fullReset();});
+  fullReset();
+})();
 
 /* ==================== INIT ==================== */
-renderLevels(); startLevel(); renderCardsSide(); renderToc(); renderHub();
+renderLevels(); startLevel(); renderCardsSide(); renderToc(); renderDashboard();
 </script>
 </body>
 </html>
