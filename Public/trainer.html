@@ -3,7 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Интерактивный тренажёр по архитектуре мессенджера: диаграммы, курс из 22 разделов, банк вопросов для подготовки к собеседованиям по System Design.">
+<meta name="keywords" content="архитектура мессенджера, system design, тренажёр, собеседование, WebSocket, E2EE, шардирование, мессенджер">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://chernoyarova.github.io/messenger_architecture/Public/trainer.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Тренажёр · Архитектура мессенджера">
+<meta property="og:description" content="Интерактивный тренажёр по архитектуре мессенджера: диаграммы, курс из 22 разделов, банк вопросов для подготовки к собеседованиям по System Design.">
+<meta property="og:url" content="https://chernoyarova.github.io/messenger_architecture/Public/trainer.html">
+<meta property="og:locale" content="ru_RU">
 <title>Тренажёр · Архитектура мессенджера</title>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Course",
+  "name": "Архитектура мессенджера",
+  "description": "Интерактивный курс из 22 разделов по проектированию мессенджера: транспортный уровень, доставка сообщений, шардирование, E2EE, Signal Protocol, группы, медиа, голосовые звонки.",
+  "url": "https://chernoyarova.github.io/messenger_architecture/Public/trainer.html",
+  "inLanguage": "ru",
+  "provider": {
+    "@type": "Person",
+    "name": "chernoyarova"
+  },
+  "educationalLevel": "Intermediate",
+  "teaches": ["System Design", "Messenger Architecture", "WebSocket", "E2EE", "Signal Protocol"],
+  "hasCourseInstance": {
+    "@type": "CourseInstance",
+    "courseMode": "online",
+    "courseWorkload": "PT10H"
+  }
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -935,7 +965,7 @@ function renderDashboard(){
       <span class="lvlbadge">${label}</span>
       <h2>Готовность к интервью</h2>
       <p>${sub}</p>
-      <div class="next"><button class="primary" onclick="goTab('${weak[2]}')">Заняться слабым местом: ${weak[0]} →</button></div>
+      <div class="next"><button class="primary" onclick="goTab('${weak[2]}')">Подтянуть ${weak[0]} →</button></div>
     </div>`;
   const nextSec=courseOrder().find(x=>x.type==='sec'&&!secPassed(x.key));
   const pillars=[

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://chernoyarova.github.io/messenger_architecture/sitemap.xml
