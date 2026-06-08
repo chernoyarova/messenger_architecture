@@ -131,6 +131,56 @@
   .note{color:var(--muted2);font-size:12px;margin-top:8px;}
   a.lnk{color:var(--edge);text-decoration:none;}
   a.lnk:hover{text-decoration:underline;}
+
+  /* ====== HUB ====== */
+  .hub{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+  @media(max-width:760px){.hub{grid-template-columns:1fr;}}
+  .hubcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;cursor:pointer;transition:.16s;position:relative;overflow:hidden;}
+  .hubcard:hover{border-color:var(--edge);transform:translateY(-2px);}
+  .hubcard .ic{font-size:30px;line-height:1;}
+  .hubcard h2{margin:12px 0 6px;font-size:20px;font-weight:800;}
+  .hubcard p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.5;}
+  .hubcard .prog{margin-top:14px;font-family:'Space Mono',monospace;font-size:12px;color:var(--edge);}
+  .hubcard .bar{height:6px;background:var(--bg2);border-radius:4px;margin-top:7px;overflow:hidden;}
+  .hubcard .bar i{display:block;height:100%;background:var(--edge);border-radius:4px;transition:.4s;}
+  .hubcard.c-course{border-top:3px solid var(--core);} .hubcard.c-course .bar i{background:var(--core);} .hubcard.c-course .prog{color:var(--core);}
+  .hubcard.c-build{border-top:3px solid var(--client);} .hubcard.c-build .bar i{background:var(--client);} .hubcard.c-build .prog{color:var(--client);}
+  .hubcard.c-cards{border-top:3px solid var(--store);} .hubcard.c-cards .bar i{background:var(--store);} .hubcard.c-cards .prog{color:var(--store);}
+  .hubcard.c-map{border-top:3px solid var(--rtc);} .hubcard.c-map .prog{color:var(--rtc);}
+  .hubhint{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--client);border-radius:12px;padding:14px 16px;margin-bottom:14px;color:var(--muted);font-size:13.5px;line-height:1.55;}
+  .hubhint b{color:var(--ink);}
+
+  /* ====== COURSE ====== */
+  .coursegrid{display:grid;grid-template-columns:300px 1fr;gap:14px;align-items:start;}
+  @media(max-width:860px){.coursegrid{grid-template-columns:1fr;}}
+  .toc{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;position:sticky;top:12px;max-height:88vh;overflow:auto;}
+  .toc .part{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--muted2);text-transform:uppercase;margin:14px 6px 6px;}
+  .toc .part:first-child{margin-top:2px;}
+  .toc .ti{display:flex;gap:9px;align-items:flex-start;width:100%;text-align:left;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:5px;cursor:pointer;transition:.12s;}
+  .toc .ti:hover{border-color:var(--core);}
+  .toc .ti.on{border-color:var(--core);background:#191f33;}
+  .toc .ti .n{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:var(--core);min-width:20px;}
+  .toc .ti.read .n::after{content:' ✓';color:var(--store);}
+  .toc .ti .tt{font-size:12.5px;font-weight:600;line-height:1.3;}
+  .reader{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px 30px;min-height:300px;}
+  .reader .rmeta{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:1px;color:var(--core);text-transform:uppercase;margin-bottom:6px;}
+  .reader h1.rt{font-size:26px;font-weight:900;margin:0 0 18px;line-height:1.15;}
+  .md{font-size:15.5px;line-height:1.68;color:#dde4f2;}
+  .md h2{font-size:19px;font-weight:800;margin:26px 0 10px;color:var(--ink);border-bottom:1px solid var(--line2);padding-bottom:6px;}
+  .md h3{font-size:16px;font-weight:700;margin:20px 0 8px;color:var(--ink);}
+  .md h4{font-size:14px;font-weight:700;margin:16px 0 6px;color:var(--muted);}
+  .md p{margin:10px 0;} .md ul,.md ol{margin:10px 0;padding-left:22px;} .md li{margin:5px 0;}
+  .md strong{color:#fff;font-weight:700;}
+  .md code{font-family:'Space Mono',monospace;font-size:13px;background:var(--bg2);border:1px solid var(--line);border-radius:5px;padding:1px 5px;color:var(--edge);}
+  .md pre{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto;margin:14px 0;}
+  .md pre code{background:none;border:none;padding:0;color:#bcd0ee;font-size:12.5px;line-height:1.5;}
+  .md blockquote{border-left:3px solid var(--core);margin:12px 0;padding:4px 14px;color:var(--muted);background:var(--bg2);border-radius:0 8px 8px 0;}
+  .md table{border-collapse:collapse;margin:14px 0;width:100%;font-size:13.5px;}
+  .md th,.md td{border:1px solid var(--line);padding:7px 10px;text-align:left;}
+  .md th{background:var(--bg2);color:var(--ink);font-weight:700;}
+  .md a{color:var(--edge);}
+  .rnav{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:26px;padding-top:18px;border-top:1px solid var(--line);}
+  .rnav .grow{flex:1;}
 </style>
 </head>
 <body>
@@ -144,13 +194,33 @@
   </header>
 
   <div class="tabs">
-    <button class="tab on" data-view="build">🧩 Собери схему</button>
+    <button class="tab on" data-view="home">🏠 Главная</button>
+    <button class="tab" data-view="course">📖 Курс</button>
+    <button class="tab" data-view="build">🧩 Собери схему</button>
     <button class="tab" data-view="cards">🃏 Карточки</button>
     <button class="tab" data-view="map">🗺️ Карта</button>
   </div>
 
+  <!-- ============ HOME ============ -->
+  <section class="view on" id="view-home">
+    <div class="hubhint">С чего начать: пройди <b>Курс</b> по разделам, по ходу собирай <b>схему</b> по памяти, а выученное закрепляй <b>карточками</b> с интервальными повторами. Возвращайся сюда как на карту прогресса.</div>
+    <div class="hub" id="hub"></div>
+  </section>
+
+  <!-- ============ COURSE ============ -->
+  <section class="view" id="view-course">
+    <div class="coursegrid">
+      <nav class="toc" id="toc"></nav>
+      <article class="reader" id="reader">
+        <div class="rmeta">Курс</div>
+        <h1 class="rt">Выбери раздел слева</h1>
+        <div class="md"><p>22 раздела курса по архитектуре мессенджера плюс справка по сетям. Читай по порядку — каждый раздел опирается на предыдущий. Прочитанные отмечаются галочкой.</p></div>
+      </article>
+    </div>
+  </section>
+
   <!-- ============ BUILD ============ -->
-  <section class="view on" id="view-build">
+  <section class="view" id="view-build">
     <div class="panel">
       <div class="lab" style="margin-bottom:8px;">Уровень — наращивай систему подсистема за подсистемой</div>
       <div class="levels" id="levels"></div>
@@ -215,7 +285,9 @@
   </section>
 </div>
 
+<script src="marked.min.js"></script>
 <script src="questions.js"></script>
+<script src="course.js"></script>
 <script>
 /* ==================== ДАННЫЕ СХЕМЫ ==================== */
 const NODES = {
@@ -264,13 +336,16 @@ const LEVELS = [
 ];
 
 /* ==================== ВКЛАДКИ ==================== */
-document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
-  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+function goTab(name){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.view===name));
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
-  t.classList.add('on');
-  document.getElementById('view-'+t.dataset.view).classList.add('on');
-  if(t.dataset.view==='cards') renderCardsSide();
-});
+  document.getElementById('view-'+name).classList.add('on');
+  if(name==='cards') renderCardsSide();
+  if(name==='home') renderHub();
+  if(name==='course') renderToc();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>goTab(t.dataset.view));
 
 /* ==================== ИГРА «СОБЕРИ СХЕМУ» ==================== */
 const SVGNS='http://www.w3.org/2000/svg';
@@ -568,8 +643,115 @@ function grade(g){
   qPos++; showCard(); renderCardsSide();
 }
 
+/* ==================== КУРС ==================== */
+const COURSE=window.COURSE||{parts:[],sections:{},refs:[]};
+const READ='msg_read_v1';
+function readStore(){try{return JSON.parse(localStorage.getItem(READ))||{}}catch(e){return {}}}
+function isRead(k){return !!readStore()[k];}
+function markRead(k){const s=readStore();s[k]=true;localStorage.setItem(READ,JSON.stringify(s));}
+
+// плоский порядок для навигации пред/след
+function courseOrder(){
+  const o=[];
+  COURSE.parts.forEach(p=>p.secs.forEach(n=>o.push({type:'sec',key:String(n)})));
+  COURSE.refs.forEach(r=>o.push({type:'ref',key:r.id}));
+  return o;
+}
+let curDoc=null;
+
+function renderToc(){
+  const toc=document.getElementById('toc');toc.innerHTML='';
+  COURSE.parts.forEach(p=>{
+    const h=document.createElement('div');h.className='part';h.textContent=p.part;toc.appendChild(h);
+    p.secs.forEach(n=>{
+      const s=COURSE.sections[String(n)];if(!s)return;
+      const b=document.createElement('button');
+      b.className='ti'+(curDoc==='sec:'+n?' on':'')+(isRead('sec'+n)?' read':'');
+      b.innerHTML=`<span class="n">${n}</span><span class="tt">${s.title}</span>`;
+      b.onclick=()=>openSection(n);
+      toc.appendChild(b);
+    });
+  });
+  if(COURSE.refs.length){
+    const h=document.createElement('div');h.className='part';h.textContent='Справка · сети и соединения';toc.appendChild(h);
+    COURSE.refs.forEach(r=>{
+      const b=document.createElement('button');
+      b.className='ti'+(curDoc==='ref:'+r.id?' on':'')+(isRead('ref'+r.id)?' read':'');
+      b.innerHTML=`<span class="n">§</span><span class="tt">${r.title}</span>`;
+      b.onclick=()=>openRef(r.id);
+      toc.appendChild(b);
+    });
+  }
+}
+function mdToHtml(md){
+  const clean=md.replace(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g,'$1'); // wiki-ссылки → текст
+  return marked.parse(clean);
+}
+function renderReader(meta,title,html,navHtml){
+  document.getElementById('reader').innerHTML=
+    `<div class="rmeta">${meta}</div><h1 class="rt">${title}</h1><div class="md">${html}</div><div class="rnav">${navHtml}</div>`;
+  window.scrollTo(0,0);
+}
+function navButtons(key){
+  const ord=courseOrder();const i=ord.findIndex(x=>x.type+':'+x.key===key);
+  let h='';
+  if(i>0){const p=ord[i-1];h+=`<button class="ghost" onclick="openDoc('${p.type}','${p.key}')">← Назад</button>`;}
+  h+='<span class="grow"></span>';
+  if(key.startsWith('sec:')){
+    const n=key.slice(4);const cnt=(window.QUESTIONS||[]).filter(c=>String(c.sec)===n).length;
+    if(cnt)h+=`<button class="ghost" onclick="studySection(${n})">📝 Вопросы (${cnt})</button>`;
+    h+=`<button class="ghost" onclick="goTab('map')">🗺️ На карту</button>`;
+  }
+  if(i<ord.length-1){const nx=ord[i+1];h+=`<button class="primary" onclick="openDoc('${nx.type}','${nx.key}')">Дальше →</button>`;}
+  return h;
+}
+function openDoc(type,key){type==='sec'?openSection(key):openRef(key);}
+function openSection(n){
+  n=String(n);const s=COURSE.sections[n];if(!s)return;
+  curDoc='sec:'+n;markRead('sec'+n);
+  renderReader('Раздел '+n,s.title,mdToHtml(s.md),navButtons('sec:'+n));
+  renderToc();
+}
+function openRef(id){
+  const r=COURSE.refs.find(x=>x.id===id);if(!r)return;
+  curDoc='ref:'+id;markRead('ref'+id);
+  renderReader('Справка',r.title,mdToHtml(r.md),navButtons('ref:'+id));
+  renderToc();
+}
+function studySection(n){secSel=String(n);goTab('cards');document.getElementById('secFilter').value=secSel;renderCardsSide();document.getElementById('btnStudy').click();}
+
+/* ==================== ХАБ (главная) ==================== */
+function renderHub(){
+  const totalSec=Object.keys(COURSE.sections).length;
+  const readSec=Object.keys(COURSE.sections).filter(n=>isRead('sec'+n)).length;
+  const lvlsDone=LEVELS.filter(l=>{const b=bestStore()[l.id];return b&&b.complete;}).length;
+  const allIdx=Q.map((c,i)=>i);
+  const dueNow=allIdx.filter(isDue).length;
+  const seen=allIdx.filter(i=>!isNew(i)).length;
+  const cards=[
+    {cls:'c-course',ic:'📖',t:'Курс',view:'course',
+     p:'22 раздела по порядку: от «чем мессенджер отличается от веб-сервиса» до группового E2EE и звонков. Плюс справка по сетям.',
+     prog:`Прочитано ${readSec} / ${totalSec} разделов`,frac:readSec/totalSec},
+    {cls:'c-build',ic:'🧩',t:'Собери схему',view:'build',
+     p:'Восстанови архитектуру по памяти: расставь блоки и проведи связи. 7 уровней — от скелета до полной схемы со звонками.',
+     prog:`Собрано уровней ${lvlsDone} / ${LEVELS.length}`,frac:lvlsDone/LEVELS.length},
+    {cls:'c-cards',ic:'🃏',t:'Карточки',view:'cards',
+     p:'67 вопросов интервьюера с интервальными повторами. Отвечай вслух, потом сверяйся — тренируется воспроизведение, а не узнавание.',
+     prog:`К повтору сейчас: ${dueNow} · изучено ${seen} / ${Q.length}`,frac:seen/Q.length},
+    {cls:'c-map',ic:'🗺️',t:'Карта',view:'map',
+     p:'Интерактивная схема со всеми узлами и 15 пошаговыми сценариями: онлайн/офлайн-доставка, догон, группы, звонки, E2EE.',
+     prog:`20 узлов · 15 сценариев`,frac:null},
+  ];
+  document.getElementById('hub').innerHTML=cards.map(c=>`
+    <div class="hubcard ${c.cls}" onclick="goTab('${c.view}')">
+      <div class="ic">${c.ic}</div><h2>${c.t}</h2><p>${c.p}</p>
+      <div class="prog">${c.prog}</div>
+      ${c.frac!==null?`<div class="bar"><i style="width:${Math.round(c.frac*100)}%"></i></div>`:''}
+    </div>`).join('');
+}
+
 /* ==================== INIT ==================== */
-renderLevels(); startLevel(); renderCardsSide();
+renderLevels(); startLevel(); renderCardsSide(); renderToc(); renderHub();
 </script>
 </body>
 </html>
