@@ -279,6 +279,7 @@
   <section class="view on" id="view-home">
     <div class="hero" id="hero"></div>
     <div class="pillars" id="pillars"></div>
+    <div style="text-align:center;margin-top:20px;"><button class="linkbtn" style="display:inline-block;width:auto;padding:6px 12px;" onclick="resetAll()">↺ Сбросить весь прогресс</button></div>
   </section>
 
   <!-- ============ COURSE ============ -->
@@ -759,7 +760,9 @@ const COURSE=window.COURSE||{parts:[],sections:{},refs:[]};
 const READ='msg_read_v1';
 function readStore(){try{return JSON.parse(localStorage.getItem(READ))||{}}catch(e){return {}}}
 function isRead(k){return !!readStore()[k];}
-function markRead(k){const s=readStore();s[k]=true;localStorage.setItem(READ,JSON.stringify(s));}
+function toggleRead(k){const s=readStore();if(s[k])delete s[k];else s[k]=true;localStorage.setItem(READ,JSON.stringify(s));
+  const rn=document.getElementById('rnav');if(rn&&curDoc)rn.innerHTML=navButtons(curDoc);
+  renderToc();renderDashboard();}
 
 // плоский порядок для навигации пред/след
 function courseOrder(){
@@ -800,32 +803,33 @@ function mdToHtml(md){
 }
 function renderReader(meta,title,html,navHtml){
   document.getElementById('reader').innerHTML=
-    `<div class="rmeta">${meta}</div><h1 class="rt">${title}</h1><div class="md">${html}</div><div class="rnav">${navHtml}</div>`;
+    `<div class="rmeta">${meta}</div><h1 class="rt">${title}</h1><div class="md">${html}</div><div class="rnav" id="rnav">${navHtml}</div>`;
   window.scrollTo(0,0);
 }
+function storeKeyOf(key){return (key.startsWith('sec:')?'sec':'ref')+key.slice(4);}
 function navButtons(key){
   const ord=courseOrder();const i=ord.findIndex(x=>x.type+':'+x.key===key);
-  let h='';
-  if(i>0){const p=ord[i-1];h+=`<button class="ghost" onclick="openDoc('${p.type}','${p.key}')">← Назад</button>`;}
+  const sk=storeKeyOf(key), done=isRead(sk);
+  let h=`<button class="${done?'ghost':'primary'}" onclick="toggleRead('${sk}')">${done?'✓ Пройдено — снять отметку':'Отметить пройденным'}</button>`;
   h+='<span class="grow"></span>';
+  if(i>0){const p=ord[i-1];h+=`<button class="ghost" onclick="openDoc('${p.type}','${p.key}')">← Назад</button>`;}
   if(key.startsWith('sec:')){
     const n=key.slice(4);const cnt=(window.QUESTIONS||[]).filter(c=>String(c.sec)===n).length;
     if(cnt)h+=`<button class="ghost" onclick="studySection(${n})">📝 Вопросы (${cnt})</button>`;
-    h+=`<button class="ghost" onclick="goTab('map')">🗺️ На карту</button>`;
   }
-  if(i<ord.length-1){const nx=ord[i+1];h+=`<button class="primary" onclick="openDoc('${nx.type}','${nx.key}')">Дальше →</button>`;}
+  if(i<ord.length-1){const nx=ord[i+1];h+=`<button class="ghost" onclick="openDoc('${nx.type}','${nx.key}')">Дальше →</button>`;}
   return h;
 }
 function openDoc(type,key){type==='sec'?openSection(key):openRef(key);}
 function openSection(n){
   n=String(n);const s=COURSE.sections[n];if(!s)return;
-  curDoc='sec:'+n;markRead('sec'+n);
+  curDoc='sec:'+n;
   renderReader('Раздел '+n,s.title,mdToHtml(s.md),navButtons('sec:'+n));
   renderToc();
 }
 function openRef(id){
   const r=COURSE.refs.find(x=>x.id===id);if(!r)return;
-  curDoc='ref:'+id;markRead('ref'+id);
+  curDoc='ref:'+id;
   renderReader('Справка',r.title,mdToHtml(r.md),navButtons('ref:'+id));
   renderToc();
 }
@@ -882,6 +886,13 @@ function renderDashboard(){
 }
 function continueCourse(){const nx=courseOrder().find(x=>x.type==='sec'&&!isRead('sec'+x.key))||courseOrder()[0];goTab('course');openDoc(nx.type,nx.key);}
 function startCards(){goTab('cards');document.getElementById('btnStudy').click();}
+function resetAll(){
+  if(!confirm('Сбросить ВЕСЬ прогресс — пройденные разделы курса, собранные уровни схемы и карточки? Действие необратимо.'))return;
+  localStorage.removeItem(READ);localStorage.removeItem(SR);localStorage.removeItem(BSTORE);
+  queue=[];qPos=0;secSel='all';curLevel=0;startLevel();renderCardsSide();renderToc();renderDashboard();
+  const rn=document.getElementById('rnav');if(rn&&curDoc)rn.innerHTML=navButtons(curDoc);
+  alert('Прогресс сброшен.');
+}
 
 /* ==================== КАРТА (нативная) ==================== */
 (function(){
