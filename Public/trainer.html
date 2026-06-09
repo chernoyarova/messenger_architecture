@@ -59,13 +59,13 @@
 
   .tabs{display:flex;gap:5px;flex-wrap:wrap;}
   .tab{font-weight:600;font-size:13.5px;color:var(--muted);background:transparent;border:1px solid transparent;border-radius:9px;padding:7px 13px;cursor:pointer;transition:.15s;}
-  .tab:hover{color:#fff;background:var(--bg2);}
+  .tab:hover{color:var(--ink);background:var(--bg2);}
   .tab.on{color:#fff;background:var(--edge);font-weight:700;}
   .view{display:none;}
   .view.on{display:block;}
 
   button{font-family:'Archivo',sans-serif;font-weight:600;font-size:13px;color:var(--ink);background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:8px 14px;cursor:pointer;transition:.15s;}
-  button:hover{border-color:var(--edge);color:#fff;}
+  button:hover{border-color:var(--edge);color:var(--ink);}
   button:disabled{opacity:.35;cursor:default;}
   button.primary{background:var(--edge);color:#fff;border-color:var(--edge);font-weight:700;}
   button.primary:hover{filter:brightness(1.06);color:#fff;}
@@ -313,8 +313,8 @@
   .qq b{color:var(--edge);margin-right:5px;}
   .qopts{display:flex;flex-direction:column;gap:7px;}
   .qopt{text-align:left;width:100%;background:var(--panel);border:1px solid var(--line);padding:10px 13px;font-weight:500;font-size:13.5px;line-height:1.45;white-space:normal;color:var(--ink);transition:.12s;}
-  .qopt:hover{border-color:var(--edge);}
-  .qopt.sel{border-color:var(--edge);background:#eef3ff;}
+  .qopt:hover{border-color:var(--edge);color:var(--ink);background:#f4f8ff;}
+  .qopt.sel,.qopt.sel:hover{border-color:var(--edge);background:#eef3ff;color:var(--ink);}
   .qopt.right{border-color:var(--good);background:#eafaf1;color:#0f7a4a;font-weight:600;}
   .qopt.wrong{border-color:var(--bad);background:#fdeef3;color:#b42c57;font-weight:600;}
   .quiz.checked .qopt.faded{opacity:.45;}
