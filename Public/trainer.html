@@ -230,8 +230,16 @@
   .capbar.rtc{border-left-color:var(--rtc);}
   .capbar .cstep{display:block;font-family:'Space Mono',monospace;font-size:11px;color:var(--edge);letter-spacing:.5px;margin-bottom:5px;}
   .capbar.rtc .cstep{color:var(--rtc);}
-  .capnav{display:flex;gap:8px;align-items:center;margin-top:11px;}
+  .capnav{display:flex;gap:8px;align-items:center;margin-top:11px;flex-wrap:wrap;}
   .capnav .sn{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted2);min-width:46px;text-align:center;}
+  .capnav .kbdhint{font-size:11px;color:var(--muted2);margin-left:auto;}
+  @media(max-width:560px){.capnav .kbdhint{display:none;}}
+  .capdots{display:flex;gap:5px;flex-wrap:wrap;margin-top:12px;}
+  .capdots .dot{width:24px;height:6px;border-radius:3px;background:var(--line);cursor:pointer;border:none;padding:0;transition:.15s;}
+  .capdots .dot:hover{background:var(--muted2);}
+  .capdots .dot.done{background:#c2cad8;}
+  .capdots .dot.on{background:var(--edge);box-shadow:0 0 0 2px rgba(47,107,255,.18);}
+  .capbar.rtc .capdots .dot.on{background:var(--rtc);box-shadow:0 0 0 2px rgba(230,57,122,.18);}
 
   /* map node/link visuals */
   .node{cursor:pointer;} .node text{pointer-events:none;}
@@ -433,7 +441,14 @@
           </svg>
         </div>
         <div class="capbar" id="mcap"><span class="cstep" id="mcapStep"></span><span id="mcapText"></span>
-          <div class="capnav"><button class="ghost" id="mPrev">‹ Назад</button><span class="sn" id="mStepNo"></span><button class="ghost" id="mNext">Дальше ›</button></div>
+          <div class="capdots" id="mDots"></div>
+          <div class="capnav">
+            <button class="ghost" id="mPrev">‹ Назад</button>
+            <button class="ghost" id="mPlay" title="Автопроигрывание">▶ Авто</button>
+            <span class="sn" id="mStepNo"></span>
+            <button class="ghost" id="mNext">Дальше ›</button>
+            <span class="kbdhint">← → листают шаги</span>
+          </div>
         </div>
         <details class="legend"><summary>Цвета слоёв и фигуры</summary><div class="legendrow" id="mlegend"></div></details>
       </div>
@@ -1008,7 +1023,9 @@ function resetAll(){
   const linksG=document.getElementById('mlinks'),nodesG=document.getElementById('mnodes'),panel=document.getElementById('mpanel');
   const cap=document.getElementById('mcap'),capStep=document.getElementById('mcapStep'),capText=document.getElementById('mcapText'),stepNo=document.getElementById('mStepNo');
   const btnPrev=document.getElementById('mPrev'),btnNext=document.getElementById('mNext'),sel=document.getElementById('scnSelect');
-  const linkEls={},nodeEls={}; let curScn=null,stepIdx=0,mode=null;
+  const btnPlay=document.getElementById('mPlay'),dotsEl=document.getElementById('mDots');
+  const LE={}; L.forEach(l=>LE[l.id]=[l.a[0],l.b[0]]);
+  const linkEls={},nodeEls={}; let curScn=null,stepIdx=0,mode=null,autoTimer=null;
   function anchor(id,side,t){const n=N[id];t=(t===undefined)?.5:t;
     if(side==='L')return[n.x,n.y+n.h*t];if(side==='R')return[n.x+n.w,n.y+n.h*t];
     if(side==='T')return[n.x+n.w*t,n.y];return[n.x+n.w*t,n.y+n.h];}
@@ -1051,30 +1068,43 @@ function resetAll(){
     for(const id in linkEls){linkEls[id].classList.remove('dim','active','statusline','rtcline');linkEls[id].setAttribute('marker-end','url(#marrow)');}
     cap.classList.remove('rtc');
   }
-  function fullReset(){mode=null;curScn=null;stepIdx=0;clearC();cap.classList.remove('show');sel.value='';
-    panel.innerHTML=`<span class="tag">Подсказка</span><h3>Карта архитектуры</h3><p class="hint">Кликни по любому компоненту — что он делает и зачем. Или выбери <b>сценарий</b> выше и пройди его по шагам кнопкой «Дальше ›». Пунктирные узлы — сервисные надстройки; розовая зона внизу — медиа-тракт звонков (RTC).</p>`;}
-  function selectNode(id){mode='node';clearC();cap.classList.remove('show');sel.value='';
+  function fullReset(){stopAuto();mode=null;curScn=null;stepIdx=0;clearC();cap.classList.remove('show');sel.value='';dotsEl.innerHTML='';
+    panel.innerHTML=`<span class="tag">Подсказка</span><h3>Карта архитектуры</h3><p class="hint">Кликни по любому компоненту — что он делает и зачем. Или выбери <b>сценарий</b> выше и пройди его по шагам: кнопками, стрелками ← → на клавиатуре или «▶ Авто». Пунктирные узлы — сервисные надстройки; розовая зона внизу — медиа-тракт звонков (RTC).</p>`;}
+  function selectNode(id){stopAuto();mode='node';clearC();cap.classList.remove('show');sel.value='';dotsEl.innerHTML='';
     nodeEls[id].classList.add('sel');const n=N[id],i=INFO[id];
     panel.innerHTML=`<span class="tag">${LN[n.layer]}</span><h3>${n.label}</h3><div class="secref">${i.sec}</div>
       <div class="row"><b>Что делает</b><span>${i.what}</span></div>
       <div class="row"><b>Зачем нужен</b><span>${i.why}</span></div>
       <div class="row"><b>Технологии</b><span>${n.tech}</span></div>`;}
-  function startScenario(id){mode='scn';curScn=SCN.find(s=>s.id===id);stepIdx=0;clearC();cap.classList.add('show');
+  function startScenario(id){stopAuto();mode='scn';curScn=SCN.find(s=>s.id===id);stepIdx=0;clearC();cap.classList.add('show');
     panel.innerHTML=`<span class="tag">${curScn.cat}</span><h3>${curScn.title}</h3><div class="secref">${curScn.sub}</div>
       <div class="row"><b>Что показываем</b><span>${curScn.intro}</span></div>`;
-    renderStep();}
+    renderDots();renderStep();}
+  function renderDots(){dotsEl.innerHTML='';curScn.steps.forEach((s,i)=>{const b=document.createElement('button');b.className='dot';b.title='Шаг '+(i+1);b.onclick=()=>{stopAuto();stepIdx=i;renderStep();};dotsEl.appendChild(b);});}
   function renderStep(){const steps=curScn.steps,st=steps[stepIdx];
     for(const id in nodeEls){nodeEls[id].classList.remove('hl','active','sel','act-status','act-rtc');nodeEls[id].classList.add('dim');}
     for(const id in linkEls){linkEls[id].classList.remove('active','statusline','rtcline');linkEls[id].classList.add('dim');linkEls[id].setAttribute('marker-end','url(#marrow)');}
     st.nodes.forEach(id=>{const e=nodeEls[id];if(!e)return;e.classList.remove('dim');e.classList.add('active');if(st.status)e.classList.add('act-status');if(st.rtc)e.classList.add('act-rtc');});
-    st.links.forEach(id=>{const l=linkEls[id];if(!l)return;l.classList.remove('dim');l.classList.add('active');if(st.status)l.classList.add('statusline');if(st.rtc)l.classList.add('rtcline');l.setAttribute('marker-end','url(#marrowA)');});
+    st.links.forEach(id=>{const l=linkEls[id];if(!l)return;l.classList.remove('dim');l.classList.add('active');if(st.status)l.classList.add('statusline');if(st.rtc)l.classList.add('rtcline');l.setAttribute('marker-end','url(#marrowA)');
+      const e=LE[id];if(e)e.forEach(nn=>{const ne=nodeEls[nn];if(ne)ne.classList.remove('dim');});});
     cap.classList.toggle('rtc',!!st.rtc);
     capStep.textContent=`Шаг ${stepIdx+1} / ${steps.length}`;capText.textContent=st.cap;stepNo.textContent=`${stepIdx+1} / ${steps.length}`;
-    btnPrev.disabled=stepIdx===0;btnNext.disabled=stepIdx===steps.length-1;}
-  btnNext.onclick=()=>{if(curScn&&stepIdx<curScn.steps.length-1){stepIdx++;renderStep();}};
-  btnPrev.onclick=()=>{if(curScn&&stepIdx>0){stepIdx--;renderStep();}};
+    btnPrev.disabled=stepIdx===0;btnNext.disabled=stepIdx===steps.length-1;
+    [...dotsEl.children].forEach((d,i)=>d.className='dot'+(i===stepIdx?' on':(i<stepIdx?' done':'')));}
+  function stopAuto(){if(autoTimer){clearInterval(autoTimer);autoTimer=null;}btnPlay.textContent='▶ Авто';}
+  function toggleAuto(){if(autoTimer){stopAuto();return;}if(!curScn)return;
+    if(stepIdx>=curScn.steps.length-1)stepIdx=0;renderStep();btnPlay.textContent='⏸ Пауза';
+    autoTimer=setInterval(()=>{if(stepIdx<curScn.steps.length-1){stepIdx++;renderStep();}else{stopAuto();}},2600);}
+  btnNext.onclick=()=>{stopAuto();if(curScn&&stepIdx<curScn.steps.length-1){stepIdx++;renderStep();}};
+  btnPrev.onclick=()=>{stopAuto();if(curScn&&stepIdx>0){stepIdx--;renderStep();}};
+  btnPlay.onclick=toggleAuto;
   document.getElementById('mReset').onclick=fullReset;
   svgm.addEventListener('click',()=>{if(mode==='node')fullReset();});
+  document.addEventListener('keydown',e=>{
+    if(!document.getElementById('view-map').classList.contains('on')||!curScn)return;
+    if(e.key==='ArrowRight'){e.preventDefault();stopAuto();if(stepIdx<curScn.steps.length-1){stepIdx++;renderStep();}}
+    else if(e.key==='ArrowLeft'){e.preventDefault();stopAuto();if(stepIdx>0){stepIdx--;renderStep();}}
+  });
   fullReset();
 })();
 
