@@ -463,8 +463,9 @@ const NODES = {
   registry:{x:548,y:150,w:148,h:58,label:'Реестр сессий',sub:'кто где подключён',layer:'edge'},
   idgen:{x:716,y:150,w:146,h:58,label:'ID-генератор',sub:'уникальность + порядок',layer:'core'},
   meta:{x:884,y:150,w:160,h:58,label:'Метаданные чата',sub:'участники · роли',layer:'store'},
-  client_a:{x:24,y:286,w:142,h:62,label:'Алиса',sub:'клиент-отправитель',layer:'client'},
-  lb:{x:198,y:286,w:142,h:62,label:'Балансировщик',sub:'L4 + API Gateway',layer:'edge'},
+  client_a:{x:24,y:286,w:126,h:62,label:'Алиса',sub:'клиент-отправитель',layer:'client'},
+  lb:{x:160,y:286,w:104,h:62,label:'Балансировщик',sub:'L4 · распределяет',layer:'edge'},
+  gw:{x:272,y:286,w:92,h:62,label:'API Gateway',sub:'L7 · токен',layer:'edge'},
   conn_a:{x:372,y:286,w:148,h:62,label:'Conn-сервер A',sub:'соединение Алисы',layer:'edge'},
   msg:{x:548,y:286,w:148,h:62,label:'Message-сервис',sub:'ядро + сигналинг',layer:'core'},
   conn_b:{x:744,y:286,w:148,h:62,label:'Conn-сервер B',sub:'соединение Боба',layer:'edge'},
@@ -479,11 +480,11 @@ const NODES = {
   sfu:{x:616,y:572,w:176,h:58,label:'SFU · медиа-сервер',sub:'групповые звонки',layer:'rtc'},
 };
 const LINKS = [
-  ['client_a','lb'],['lb','conn_a'],['conn_a','msg'],['msg','conn_b'],['conn_b','client_b'],
+  ['client_a','lb'],['lb','gw'],['gw','conn_a'],['conn_a','msg'],['msg','conn_b'],['conn_b','client_b'],
   ['msg','registry'],['registry','conn_b'],['msg','db'],['presence','conn_a'],['msg','queue'],
   ['msg','push'],['push','client_b'],['queue','conn_b'],['client_a','media'],['msg','fanout'],
   ['fanout','db'],['device_a2','lb'],['conn_a','device_a2'],['presence','conn_b'],['fanout','conn_b'],
-  ['auth','lb'],['msg','idgen'],['meta','fanout'],['sync','db'],['sync','conn_b'],
+  ['auth','gw'],['msg','idgen'],['meta','fanout'],['sync','db'],['sync','conn_b'],
   ['client_a','client_b',1],['client_a','turn',1],['turn','client_b',1],['client_a','sfu',1],
   ['sfu','client_b',1],['msg','turn',1],['msg','sfu',1],
 ];
@@ -492,7 +493,7 @@ const LAYERS = {
   store:{c:'#5ad19a',n:'Хранение'}, scale:{c:'#ff944d',n:'Масштаб'}, push:{c:'#cf91f5',n:'Пуши'}, rtc:{c:'#ff6f91',n:'RTC'},
 };
 const LEVELS = [
-  {id:'skeleton',name:'1 · Скелет',star:1,desc:'Минимальный костяк: проведи одно сообщение Алиса → Боб. Именно с него начинаешь на интервью.',add:['client_a','lb','conn_a','msg','registry','conn_b','client_b','db']},
+  {id:'skeleton',name:'1 · Скелет',star:1,desc:'Минимальный костяк: проведи одно сообщение Алиса → Боб. Именно с него начинаешь на интервью.',add:['client_a','lb','gw','conn_a','msg','registry','conn_b','client_b','db']},
   {id:'reliab',name:'2 · Надёжность',desc:'ID-генератор для порядка, очередь офлайна, догон по курсору после переподключения.',add:['idgen','queue','sync']},
   {id:'session',name:'3 · Сессия',desc:'Аутентификация при подключении и статусы присутствия (онлайн / печатает).',add:['auth','presence']},
   {id:'media',name:'4 · Медиа',desc:'Файлы идут мимо канала сообщений — объектное хранилище + CDN.',add:['media']},
