@@ -1,0 +1,779 @@
+/* ==================== ДАННЫЕ СХЕМЫ ====================
+   Единый источник — mapdata.js. Игра берёт оттуда узлы, связи и уровни,
+   чтобы карта и игра не расходились при правках схемы. */
+const NODES = window.MAPDATA.NODES;
+const LINKS = window.MAPDATA.LINKS.map(l=>[l.a[0], l.b[0], l.rtc?1:0]);
+const LEVELS = window.MAPDATA.LEVELS;
+const LAYERS = {
+  client:{c:'#f4c95d',n:'Клиент'}, edge:{c:'#5ec8f2',n:'Соединения'}, core:{c:'#8b9bff',n:'Ядро'},
+  store:{c:'#5ad19a',n:'Хранение'}, scale:{c:'#ff944d',n:'Масштаб'}, push:{c:'#cf91f5',n:'Пуши'}, rtc:{c:'#ff6f91',n:'RTC'},
+};
+
+/* ==================== ВКЛАДКИ + HASH-РОУТИНГ ==================== */
+/* #home · #course · #course/6A · #course/ref/ws · #build · #cards · #map —
+   F5 и кнопка «назад» возвращают на то же место, разделом можно поделиться ссылкой. */
+let lastAppliedHash=null;
+function setHash(h){ lastAppliedHash=h; if(location.hash!==h) location.hash=h; }
+function hashForDoc(doc){ // doc = 'sec:6A' | 'ref:ws'
+  if(!doc) return '#course';
+  return doc.startsWith('ref:') ? '#course/ref/'+encodeURIComponent(doc.slice(4))
+                                : '#course/'+encodeURIComponent(doc.slice(4));
+}
+function goTab(name,opts){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.view===name));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+  document.getElementById('view-'+name).classList.add('on');
+  if(name==='cards') renderCardsSide();
+  if(name==='home') renderDashboard();
+  if(name==='course') renderToc();
+  if(!(opts&&opts.noHash)) setHash(name==='course'?hashForDoc(curDoc):'#'+name);
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>goTab(t.dataset.view));
+function applyHash(){
+  lastAppliedHash=location.hash;
+  const h=location.hash.slice(1);
+  const parts=h.split('/').map(decodeURIComponent);
+  const tab=parts[0]||'home';
+  if(tab==='course'){
+    goTab('course',{noHash:true});
+    if(parts[1]==='ref'&&parts[2]) openRef(parts[2],{noHash:true});
+    else if(parts[1]) openSection(parts[1],{noHash:true});
+  } else if(['home','build','cards','map'].includes(tab)) goTab(tab,{noHash:true});
+  else goTab('home',{noHash:true});
+}
+window.addEventListener('hashchange',()=>{ if(location.hash!==lastAppliedHash) applyHash(); });
+
+/* ==================== ИГРА «СОБЕРИ СХЕМУ» ==================== */
+const SVGNS='http://www.w3.org/2000/svg';
+const svg=document.getElementById('boardSvg');
+const BSTORE='msg_build_v1', BLVL='msg_build_lvl';
+let curLevel=0, levelNodes=[], reqLinks=[], placed={}, phase='place', paletteOrder=[];
+let pickChip=null, pickNode=null, doneLinks=new Set(), missCount=0, hintTimer=null, drag=null;
+
+function bestStore(){try{return JSON.parse(localStorage.getItem(BSTORE))||{}}catch(e){return {}}}
+function saveBest(o){localStorage.setItem(BSTORE,JSON.stringify(o));}
+(function(){const v=parseInt(localStorage.getItem(BLVL));if(v>=0&&v<LEVELS.length)curLevel=v;})();
+
+function levelSet(idx){let s=[];for(let i=0;i<=idx;i++)s=s.concat(LEVELS[i].add);return s;}
+function el(tag,attrs){const e=document.createElementNS(SVGNS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;}
+function center(id){const n=NODES[id];return [n.x+n.w/2,n.y+n.h/2];}
+
+function renderLevels(){
+  const best=bestStore();
+  const sel=document.getElementById('lvlSelect');
+  sel.innerHTML=LEVELS.map((lv,i)=>{
+    const done=best[lv.id]&&best[lv.id].complete;
+    return `<option value="${i}"${i===curLevel?' selected':''}>${done?'★ ':''}${lv.name}</option>`;
+  }).join('');
+  document.getElementById('lvlDesc').textContent=LEVELS[curLevel].desc;
+  document.getElementById('lvlPrev').disabled=curLevel===0;
+  document.getElementById('lvlNext').disabled=curLevel===LEVELS.length-1;
+}
+document.getElementById('lvlSelect').onchange=e=>{curLevel=+e.target.value;startLevel();};
+document.getElementById('lvlPrev').onclick=()=>{if(curLevel>0){curLevel--;startLevel();}};
+document.getElementById('lvlNext').onclick=()=>{if(curLevel<LEVELS.length-1){curLevel++;startLevel();}};
+
+function startLevel(fresh){
+  levelNodes=levelSet(curLevel);
+  const includeRtc=curLevel>=LEVELS.findIndex(l=>l.id==='rtc');
+  const setHas=id=>levelNodes.includes(id);
+  reqLinks=LINKS.filter(l=>setHas(l[0])&&setHas(l[1])&&(!l[2]||includeRtc));
+  localStorage.setItem(BLVL,curLevel);
+  const done=bestStore()[LEVELS[curLevel].id];
+  if(done&&done.complete&&!fresh){ renderSolved(done); return; }
+  placed={}; phase='place'; pickChip=null; pickNode=null; doneLinks=new Set(); missCount=0;
+  paletteOrder=shuffle(levelNodes.slice());
+  document.getElementById('doneBanner').classList.remove('show');
+  document.getElementById('btnToLinks').style.display='none';
+  renderLevels(); renderBoard(); renderPalette(); updateScore();
+  document.getElementById('phaseTag').innerHTML='<span class="fnum">Фаза 1</span> · Расставь блоки';
+  document.getElementById('paletteTitle').textContent='Блоки — перетащи на доску';
+  renderLegend();
+}
+function renderSolved(best){
+  placed={}; levelNodes.forEach(id=>placed[id]=true);
+  phase='link'; doneLinks=new Set(reqLinks.map(l=>linkKey(l[0],l[1]))); missCount=0;
+  document.getElementById('btnToLinks').style.display='none';
+  renderLevels(); renderBoard();
+  reqLinks.forEach(l=>drawLink(l[0],l[1],'done'));
+  updateScore(); renderLegend();
+  document.getElementById('phaseTag').innerHTML='<span class="fnum">✓ Собрано</span> · уровень пройден';
+  document.getElementById('paletteTitle').textContent='Готово';
+  levelDoneActions(`Уровень уже собран ✓ Лучший результат — ошибок: ${best.miss}.`);
+  const bn=document.getElementById('doneBanner');
+  bn.textContent=`✓ Уровень «${LEVELS[curLevel].name}» пройден. Можешь пройти заново или взять следующий уровень.`;
+  bn.classList.add('show');
+}
+function levelDoneActions(note){
+  const hasNext=curLevel<LEVELS.length-1;
+  const box=document.getElementById('paletteBox');
+  box.innerHTML=(note?`<div class="empty">${note}</div>`:'')
+    +(hasNext?`<button class="primary" id="btnNextLvl" style="width:100%;">Следующий уровень →</button>`:`<div class="empty">Это полная схема — собрано! 🎉</div>`)
+    +`<button class="ghost" id="btnRedo" style="width:100%;margin-top:8px;">Пройти заново</button>`;
+  if(hasNext)document.getElementById('btnNextLvl').onclick=()=>{curLevel++;startLevel();};
+  document.getElementById('btnRedo').onclick=()=>startLevel(true);
+}
+
+function viewBox(){
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  levelNodes.forEach(id=>{const n=NODES[id];minX=Math.min(minX,n.x);minY=Math.min(minY,n.y);maxX=Math.max(maxX,n.x+n.w);maxY=Math.max(maxY,n.y+n.h);});
+  const p=34;return `${minX-p} ${minY-p} ${maxX-minX+2*p} ${maxY-minY+2*p}`;
+}
+
+function renderBoard(){
+  svg.innerHTML=''; svg.setAttribute('viewBox',viewBox());
+  const gl=el('g',{}); gl.id='glinks'; svg.appendChild(gl);
+  // ghost slots (unplaced) or placed nodes
+  levelNodes.forEach(id=>{
+    const n=NODES[id], col=LAYERS[n.layer].c;
+    if(placed[id]) drawPlaced(id);
+    else{
+      const g=el('g',{class:'slot'}); g.dataset.id=id; g.style.color=col;
+      g.appendChild(el('rect',{class:'box',x:n.x,y:n.y,width:n.w,height:n.h,rx:11,stroke:col}));
+      const qm=el('text',{class:'qm',x:n.x+n.w/2,y:n.y+n.h/2-3,'text-anchor':'middle','dominant-baseline':'middle'});qm.textContent='?';
+      g.appendChild(qm);
+      const ht=el('text',{class:'hint',x:n.x+n.w/2,y:n.y+n.h-9,'text-anchor':'middle'});ht.textContent=n.sub;
+      g.appendChild(ht);
+      g.onclick=()=>onSlotClick(id,g);
+      svg.appendChild(g);
+    }
+  });
+}
+
+function drawPlaced(id){
+  const n=NODES[id], col=LAYERS[n.layer].c;
+  const g=el('g',{class:'pnode'}); g.dataset.id=id; g.style.color=col;
+  g.appendChild(el('rect',{class:'box',x:n.x,y:n.y,width:n.w,height:n.h,rx:11,fill:'#fff',stroke:col}));
+  const t1=el('text',{class:'lbl',x:n.x+10,y:n.y+24});t1.textContent=n.label;g.appendChild(t1);
+  const t2=el('text',{class:'sub',x:n.x+10,y:n.y+40});t2.textContent=n.sub;g.appendChild(t2);
+  g.onclick=()=>onNodeClick(id,g);
+  svg.appendChild(g);
+}
+
+function placeNode(id){ placed[id]=true; pickChip=null; renderBoard(); renderPalette(); updateScore(); checkPlaceDone(); }
+function onSlotClick(id,g){
+  if(phase!=='place') return;
+  if(!pickChip){flashBad(g);return;}
+  if(pickChip===id){ placeNode(id); }
+  else { missCount++; flashBad(g); updateScore(); }
+}
+function flashBad(g){g.classList.add('bad');setTimeout(()=>g.classList.remove('bad'),350);}
+
+/* ---- drag-and-drop блоков ---- */
+function slotAt(x,y){const e=document.elementFromPoint(x,y);const s=e&&e.closest?e.closest('.slot'):null;return s?s.dataset.id:null;}
+function startChipDrag(e,id,chip){
+  if(phase!=='place')return;
+  e.preventDefault();
+  drag={id,chip,sx:e.clientX,sy:e.clientY,moved:false,ghost:null};
+  window.addEventListener('pointermove',onChipMove);
+  window.addEventListener('pointerup',onChipUp);
+}
+function onChipMove(e){
+  if(!drag)return;
+  if(!drag.moved){
+    if(Math.abs(e.clientX-drag.sx)+Math.abs(e.clientY-drag.sy)<6)return;
+    drag.moved=true;
+    const gh=document.createElement('div');gh.className='dragghost';gh.textContent=NODES[drag.id].label;
+    document.body.appendChild(gh);drag.ghost=gh;drag.chip.classList.add('dragging');
+  }
+  drag.ghost.style.left=e.clientX+'px';drag.ghost.style.top=e.clientY+'px';
+  svg.querySelectorAll('.slot.dragover').forEach(s=>s.classList.remove('dragover'));
+  const sid=slotAt(e.clientX,e.clientY);
+  if(sid){const s=[...svg.querySelectorAll('.slot')].find(x=>x.dataset.id===sid);if(s)s.classList.add('dragover');}
+}
+function onChipUp(e){
+  window.removeEventListener('pointermove',onChipMove);
+  window.removeEventListener('pointerup',onChipUp);
+  if(!drag)return;
+  svg.querySelectorAll('.slot.dragover').forEach(s=>s.classList.remove('dragover'));
+  if(drag.ghost)drag.ghost.remove();
+  if(drag.moved){
+    const sid=slotAt(e.clientX,e.clientY);
+    if(sid===drag.id){ placeNode(drag.id); }
+    else if(sid){ missCount++; updateScore(); const s=[...svg.querySelectorAll('.slot')].find(x=>x.dataset.id===sid); if(s)flashBad(s); }
+    drag=null;
+  } else {
+    const id=drag.id; drag=null; pickChip=(pickChip===id?null:id); renderPalette();
+  }
+}
+
+function onNodeClick(id,g){
+  if(phase==='place'){ // un-place
+    delete placed[id]; renderBoard(); renderPalette(); updateScore(); return;
+  }
+  // link phase
+  if(!pickNode){ pickNode=id; g.classList.add('pick'); return; }
+  if(pickNode===id){ pickNode=null; g.classList.remove('pick'); return; }
+  attemptLink(pickNode,id);
+  document.querySelectorAll('.pnode.pick').forEach(x=>x.classList.remove('pick'));
+  pickNode=null;
+}
+
+function linkKey(a,b){return [a,b].sort().join('~');}
+function attemptLink(a,b){
+  const key=linkKey(a,b);
+  const exists=reqLinks.some(l=>linkKey(l[0],l[1])===key);
+  if(exists && !doneLinks.has(key)){ doneLinks.add(key); drawLink(a,b,'done'); updateScore(); checkLinksDone(); }
+  else if(exists){ /* already done */ }
+  else { missCount++; updateScore(); drawLink(a,b,'flash',true); }
+}
+function drawLink(a,b,cls,temp){
+  const [ax,ay]=center(a),[bx,by]=center(b);
+  const ln=el('line',{class:'glink '+cls,x1:ax,y1:ay,x2:bx,y2:by});
+  document.getElementById('glinks').appendChild(ln);
+  if(temp) setTimeout(()=>ln.remove(),350);
+}
+
+function renderPalette(){
+  const box=document.getElementById('paletteBox');box.innerHTML='';
+  if(phase==='link'){ box.innerHTML='<div class="empty">Соедини блоки: кликни один, потом второй. Нужно восстановить все связи.</div>'; document.getElementById('btnToLinks').style.display='none'; return; }
+  const remaining=paletteOrder.filter(id=>!placed[id]);
+  if(remaining.length===0){ box.innerHTML='<div class="empty">Все блоки на месте ✓</div>'; return; }
+  remaining.forEach(id=>{
+    const n=NODES[id],col=LAYERS[n.layer].c;
+    const c=document.createElement('button');
+    c.className='chip'+(pickChip===id?' pick':'');c.style.borderLeftColor=col;c.dataset.id=id;
+    c.innerHTML=`<span><span class="nm">${n.label}</span><span class="sb">${LAYERS[n.layer].n}</span></span>`;
+    c.addEventListener('pointerdown',e=>startChipDrag(e,id,c));
+    box.appendChild(c);
+  });
+}
+
+function checkPlaceDone(){
+  if(levelNodes.every(id=>placed[id])){
+    document.getElementById('btnToLinks').style.display='block';
+    document.getElementById('paletteBox').innerHTML='<div class="empty">Все блоки на месте ✓ Переходи к связям.</div>';
+  }
+}
+document.getElementById('btnToLinks').onclick=()=>{
+  phase='link'; pickChip=null;
+  document.getElementById('phaseTag').innerHTML='<span class="fnum">Фаза 2</span> · Восстанови связи';
+  document.getElementById('paletteTitle').textContent='Связи';
+  renderBoard(); renderPalette(); updateScore();
+};
+
+function checkLinksDone(){
+  if(doneLinks.size===reqLinks.length && reqLinks.length>0){
+    const best=bestStore(); const lv=LEVELS[curLevel].id;
+    const prev=best[lv]; const score={complete:true,miss:missCount};
+    if(!prev||missCount<prev.miss) best[lv]=score; else best[lv].complete=true;
+    saveBest(best);
+    const bn=document.getElementById('doneBanner');
+    bn.textContent=`✓ Уровень «${LEVELS[curLevel].name}» собран! Ошибок: ${missCount}.`;
+    bn.classList.add('show'); renderLevels();
+    document.getElementById('phaseTag').innerHTML='<span class="fnum">✓ Собрано</span> · уровень пройден';
+    document.getElementById('paletteTitle').textContent='Готово';
+    levelDoneActions(`Готово! Ошибок: ${missCount}.`);
+  }
+}
+
+function updateScore(){
+  let cur,tot,label;
+  if(phase==='place'){cur=Object.keys(placed).length;tot=levelNodes.length;label='блоков на месте';}
+  else{cur=doneLinks.size;tot=reqLinks.length;label='связей восстановлено';}
+  document.getElementById('pbarFill').style.width=(tot?Math.round(cur/tot*100):0)+'%';
+  document.getElementById('phaseCount').textContent=cur+'/'+tot;
+  document.getElementById('phaseLabel').textContent=label;
+  document.getElementById('scMiss').textContent=missCount;
+}
+
+document.getElementById('btnReset').onclick=()=>startLevel(true);
+document.getElementById('btnHint').onclick=()=>{
+  clearTimeout(hintTimer);
+  document.querySelectorAll('.glink.hint').forEach(x=>x.remove());
+  document.querySelectorAll('.hintnode').forEach(x=>x.classList.remove('hintnode'));
+  if(phase==='place'){
+    const miss=levelNodes.find(id=>!placed[id]); if(!miss)return;
+    pickChip=miss; renderPalette();
+    const g=[...svg.querySelectorAll('.slot')].find(s=>s.dataset.id===miss);
+    if(g){g.classList.add('armed');hintTimer=setTimeout(()=>g.classList.remove('armed'),1500);}
+  } else {
+    const miss=reqLinks.find(l=>!doneLinks.has(linkKey(l[0],l[1]))); if(!miss)return;
+    drawLink(miss[0],miss[1],'hint');
+    [miss[0],miss[1]].forEach(id=>{const g=[...svg.querySelectorAll('.pnode')].find(s=>s.dataset.id===id);if(g)g.classList.add('hintnode');});
+    hintTimer=setTimeout(()=>{document.querySelectorAll('.glink.hint').forEach(x=>x.remove());document.querySelectorAll('.hintnode').forEach(x=>x.classList.remove('hintnode'));},1800);
+  }
+};
+function renderLegend(){
+  const used=[...new Set(levelNodes.map(id=>NODES[id].layer))];
+  document.getElementById('legend').innerHTML=used.map(l=>`<span><i style="background:${LAYERS[l].c}"></i>${LAYERS[l].n}</span>`).join('');
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+/* ==================== КАРТОЧКИ + ИНТЕРВАЛЬНЫЕ ПОВТОРЫ ==================== */
+const Q=window.QUESTIONS||[];
+const SR='msg_sr_v2', SR_V1='msg_sr_v1';
+const DAY=864e5, MIN=6e4;
+// Состояние повторов ключуется содержимым карточки (раздел + вопрос), а не индексом:
+// при вставке новых вопросов в середину questions.js прогресс не съезжает на чужие карточки.
+function srKey(i){const c=Q[i];return c.sec+'|'+c.q;}
+function srStore(){try{return JSON.parse(localStorage.getItem(SR))||{}}catch(e){return {}}}
+function srSave(o){localStorage.setItem(SR,JSON.stringify(o));}
+(function migrateSR(){ // v1 хранил состояние по индексу массива — переносим на ключи как есть
+  if(localStorage.getItem(SR)||!localStorage.getItem(SR_V1))return;
+  let old;try{old=JSON.parse(localStorage.getItem(SR_V1))||{}}catch(e){old={};}
+  const s={};for(const k in old){const i=+k;if(Q[i])s[srKey(i)]=old[k];}
+  srSave(s);localStorage.removeItem(SR_V1);
+})();
+function isDue(i){const c=srStore()[srKey(i)];return !c?false:c.due<=Date.now();}
+function isNew(i){return !srStore()[srKey(i)];}
+
+let queue=[], qPos=0, secSel='all', revealed=false;
+
+function buildSecFilter(){
+  const sel=document.getElementById('secFilter');
+  const secs=[...new Set(Q.map(c=>c.sec))].sort((a,b)=>(parseInt(a)-parseInt(b))||String(a).localeCompare(String(b)));
+  sel.innerHTML='<option value="all">Все разделы ('+Q.length+')</option>'+
+    secs.map(s=>{const t=Q.find(c=>c.sec===s).secTitle;const n=Q.filter(c=>c.sec===s).length;return `<option value="${s}">Раздел ${s} · ${t} (${n})</option>`}).join('');
+  sel.value=secSel;
+  sel.onchange=()=>{secSel=sel.value;renderCardsSide();};
+}
+
+function pool(){return Q.map((c,i)=>i).filter(i=>secSel==='all'||String(Q[i].sec)===String(secSel));}
+
+function renderCardsSide(){
+  buildSecFilter();
+  const p=pool();
+  const due=p.filter(isDue).length, nw=p.filter(isNew).length, seen=p.filter(i=>!isNew(i)).length;
+  document.getElementById('stDue').textContent=due;
+  document.getElementById('stNew').textContent=nw;
+  document.getElementById('stSeen').textContent=seen;
+  renderHeat();
+  if(!queue.length) renderFlashIdle(due,nw);
+}
+function renderHeat(){
+  const heat=document.getElementById('heat');heat.innerHTML='';
+  const secs=[...new Set(Q.map(c=>c.sec))].sort((a,b)=>(parseInt(a)-parseInt(b))||String(a).localeCompare(String(b)));
+  secs.forEach(s=>{
+    const idxs=Q.map((c,i)=>i).filter(i=>Q[i].sec===s);
+    const seen=idxs.filter(i=>!isNew(i));
+    let col=getComputedStyle(document.documentElement).getPropertyValue('--bg2');
+    if(seen.length){
+      const avgInt=seen.reduce((a,i)=>a+(srStore()[srKey(i)].interval||0),0)/seen.length;
+      const frac=seen.length/idxs.length;
+      if(avgInt>=3 && frac>=0.6) col='rgba(90,209,154,.85)';
+      else if(frac>0) col='rgba(244,201,93,.7)';
+    }
+    const c=document.createElement('button');c.className='cell';c.style.background=col;c.textContent=s;
+    c.title=`Раздел ${s}: ${seen.length}/${idxs.length} изучено`;
+    c.onclick=()=>{secSel=String(s);document.getElementById('secFilter').value=secSel;renderCardsSide();};
+    heat.appendChild(c);
+  });
+}
+function renderFlashIdle(due,nw){
+  const status=due?`К повтору сейчас: ${due}.`:(nw?'Срочных повторов нет.':'Все повторы сделаны — сессия даст случайную выборку для прогона.');
+  document.getElementById('flashBox').innerHTML=
+    `<div class="emptyq"><b>Готова тренироваться?</b>${status} ${nw?`Новых вопросов: ${nw}.`:''}<br><br>Жми «Начать сессию» справа. Отвечай вслух или на бумаге <i>до</i> того, как раскроешь ответ — так тренируется воспроизведение, а не узнавание.</div>`;
+}
+
+document.getElementById('btnStudy').onclick=()=>{
+  const p=pool();
+  let due=p.filter(isDue), nw=p.filter(isNew);
+  queue=shuffle(due).concat(shuffle(nw)).slice(0,40);
+  if(!queue.length) queue=shuffle(p.slice()).slice(0,20); // всё освоено — повтори по кругу
+  qPos=0; showCard();
+};
+document.getElementById('btnResetSR').onclick=()=>{
+  if(confirm('Сбросить весь прогресс карточек?')){localStorage.removeItem(SR);queue=[];renderCardsSide();}
+};
+
+function showCard(){
+  if(qPos>=queue.length){
+    document.getElementById('flashBox').innerHTML=`<div class="emptyq"><b>Сессия завершена ✓</b>Прогресс сохранён. Можно начать новую или переключиться на сборку схемы.</div>`;
+    queue=[];renderCardsSide();return;
+  }
+  revealed=false;
+  const i=queue[qPos], c=Q[i];
+  document.getElementById('flashBox').innerHTML=`
+    <div class="meta"><span class="secpill">Раздел ${c.sec} · ${c.secTitle}</span><span>${qPos+1} / ${queue.length}</span></div>
+    <div class="q">${c.q}</div>
+    <div class="ahint" id="ahint">Ответь сама вслух, потом раскрой ↓ (пробел)</div>
+    <div class="answer" id="answer">${c.a}<span class="src">↩ ${c.courseFile}</span></div>
+    <div class="spacer"></div>
+    <div class="actions" id="actions">
+      <button class="primary" id="btnReveal" style="width:100%;">Показать ответ</button>
+    </div>`;
+  document.getElementById('btnReveal').onclick=reveal;
+}
+function reveal(){
+  revealed=true;
+  document.getElementById('answer').classList.add('show');
+  document.getElementById('ahint').style.display='none';
+  document.getElementById('actions').innerHTML=`
+    <div class="lab" style="margin-bottom:7px;">Насколько уверенно ответила? · клавиши 1–4</div>
+    <div class="grades">
+      <button class="g-again" data-g="0">Снова<small>&lt;10м</small></button>
+      <button class="g-hard" data-g="1">Трудно<small>~1д</small></button>
+      <button class="g-good" data-g="2">Хорошо<small>дни</small></button>
+      <button class="g-easy" data-g="3">Легко<small>недели</small></button>
+    </div>`;
+  document.querySelectorAll('.grades button').forEach(b=>b.onclick=()=>grade(+b.dataset.g));
+}
+function grade(g){
+  const i=queue[qPos]; const s=srStore(); const k=srKey(i); const c=s[k]||{ease:2.5,interval:0,due:0,reps:0};
+  if(g===0){ c.ease=Math.max(1.3,c.ease-0.2); c.interval=0; c.reps=0; c.due=Date.now()+10*MIN; }
+  else if(g===1){ c.ease=Math.max(1.3,c.ease-0.15); c.interval=Math.max(1,(c.interval||1)*1.2); c.reps++; c.due=Date.now()+c.interval*DAY; }
+  else if(g===2){ c.interval=c.reps===0?1:(c.reps===1?3:Math.round((c.interval||1)*c.ease)); c.reps++; c.due=Date.now()+c.interval*DAY; }
+  else { c.ease=c.ease+0.15; c.interval=Math.round((c.interval||1)*c.ease*1.3); c.reps++; c.due=Date.now()+c.interval*DAY; }
+  s[k]=c; srSave(s); bumpGrades();
+  if(g===0) queue.push(i); // показать снова в конце сессии
+  qPos++; showCard(); renderCardsSide();
+}
+/* клавиатура: пробел — показать ответ, 1–4 — оценка */
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('view-cards').classList.contains('on'))return;
+  if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
+  if(!queue.length||qPos>=queue.length)return;
+  if(!revealed&&e.key===' '){e.preventDefault();reveal();}
+  else if(revealed&&e.key>='1'&&e.key<='4'){e.preventDefault();grade(+e.key-1);}
+});
+
+/* ==================== КУРС ==================== */
+const COURSE=window.COURSE||{parts:[],sections:{},refs:[]};
+const READ='msg_read_v1';            // legacy (очищается при сбросе)
+const TST='msg_test_v1';             // лучший результат теста по разделу
+function testStore(){try{return JSON.parse(localStorage.getItem(TST))||{}}catch(e){return {}}}
+function testCount(n){const v=testStore()[String(n)];return v==null?null:v;}
+function testTotal(n){const t=(window.TESTS||{})[String(n)];return t?t.length:6;}
+function secPassed(n){const c=testCount(n);return c!=null&&c>=testTotal(n);}
+function secFrac(n){const c=testCount(n);return c==null?0:Math.min(1,c/testTotal(n));}
+function saveTest(n,score){const s=testStore();const k=String(n);if(score>(s[k]||0))s[k]=score;localStorage.setItem(TST,JSON.stringify(s));}
+
+// плоский порядок для навигации пред/след
+function courseOrder(){
+  const o=[];
+  COURSE.parts.forEach(p=>p.secs.forEach(n=>o.push({type:'sec',key:String(n)})));
+  COURSE.refs.forEach(r=>o.push({type:'ref',key:r.id}));
+  return o;
+}
+let curDoc=null;
+
+function renderToc(){
+  const toc=document.getElementById('toc');toc.innerHTML='';
+  COURSE.parts.forEach(p=>{
+    const h=document.createElement('div');h.className='part';h.textContent=p.part;toc.appendChild(h);
+    p.secs.forEach(n=>{
+      const s=COURSE.sections[String(n)];if(!s)return;
+      const b=document.createElement('button');
+      b.className='ti'+(curDoc==='sec:'+n?' on':'')+(secPassed(n)?' read':'');
+      const c=testCount(n);
+      const score=(!secPassed(n)&&c!=null)?`<span class="qsc">${c}/${testTotal(n)}</span>`:'';
+      b.innerHTML=`<span class="n">${n}</span><span class="tt">${s.title}</span>${score}`;
+      b.onclick=()=>openSection(n);
+      toc.appendChild(b);
+    });
+  });
+  if(COURSE.refs.length){
+    const h=document.createElement('div');h.className='part';h.textContent='Справка · сети и соединения';toc.appendChild(h);
+    COURSE.refs.forEach(r=>{
+      const b=document.createElement('button');
+      b.className='ti'+(curDoc==='ref:'+r.id?' on':'');
+      b.innerHTML=`<span class="n">§</span><span class="tt">${r.title}</span>`;
+      b.onclick=()=>openRef(r.id);
+      toc.appendChild(b);
+    });
+  }
+}
+function mdToHtml(md){
+  const clean=md.replace(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g,'$1'); // wiki-ссылки → текст
+  return marked.parse(clean);
+}
+function renderReader(meta,title,html,navHtml){
+  document.getElementById('reader').innerHTML=
+    `<div class="rmeta">${meta}</div><h1 class="rt">${title}</h1><div class="md">${html}</div><div id="quizbox"></div><div class="rnav" id="rnav">${navHtml}</div>`;
+  window.scrollTo(0,0);
+}
+function navButtons(key){
+  const ord=courseOrder();const i=ord.findIndex(x=>x.type+':'+x.key===key);
+  let h='';
+  if(i>0){const p=ord[i-1];h+=`<button class="ghost" onclick="openDoc('${p.type}','${p.key}')">← Назад</button>`;}
+  h+='<span class="grow"></span>';
+  if(key.startsWith('sec:')){
+    const n=key.slice(4);const cnt=(window.QUESTIONS||[]).filter(c=>String(c.sec)===n).length;
+    if(cnt)h+=`<button class="ghost" onclick="studySection(${n})">📝 Открытые вопросы (${cnt})</button>`;
+  }
+  if(i<ord.length-1){const nx=ord[i+1];h+=`<button class="ghost" onclick="openDoc('${nx.type}','${nx.key}')">Дальше →</button>`;}
+  return h;
+}
+function openDoc(type,key){type==='sec'?openSection(key):openRef(key);}
+function openSection(n,opts){
+  n=String(n);const s=COURSE.sections[n];if(!s)return;
+  curDoc='sec:'+n;
+  if(!(opts&&opts.noHash)) setHash(hashForDoc(curDoc));
+  renderReader('Раздел '+n,s.title,mdToHtml(s.md),navButtons('sec:'+n));
+  renderQuiz(n);
+  renderToc();
+}
+function openRef(id,opts){
+  const r=COURSE.refs.find(x=>x.id===id);if(!r)return;
+  curDoc='ref:'+id;
+  if(!(opts&&opts.noHash)) setHash(hashForDoc(curDoc));
+  renderReader('Справка',r.title,mdToHtml(r.md),navButtons('ref:'+id));
+  renderToc();
+}
+function studySection(n){secSel=String(n);goTab('cards');document.getElementById('secFilter').value=secSel;renderCardsSide();document.getElementById('btnStudy').click();}
+
+/* ---- Тест по разделу ---- */
+const TESTS=window.TESTS||{};
+const QLET=['А','Б','В','Г'];
+let quizSec=null,quizSel={},quizChecked=false,quizPerm=[];
+function renderQuiz(n){
+  const box=document.getElementById('quizbox');if(!box)return;
+  const qs=TESTS[String(n)];
+  if(!qs||!qs.length){box.innerHTML='';return;}
+  quizSec=String(n);quizSel={};quizChecked=false;
+  // варианты перемешиваются на каждом рендере, чтобы при пересдаче
+  // запоминался смысл ответа, а не его буква
+  quizPerm=qs.map(q=>shuffle(q.opts.map((_,i)=>i)));
+  box.innerHTML=`<div class="quiz" id="quizroot">
+    <div class="quizhead"><h2>Тест по разделу</h2></div>
+    <div class="quizsub">Ответь на все ${qs.length} вопросов и нажми «Проверить». Раздел засчитывается пройденным при ${qs.length} / ${qs.length}.</div>
+    ${qs.map((q,qi)=>`<div class="qitem" id="qitem${qi}">
+      <div class="qq"><b>${qi+1}.</b>${q.q}</div>
+      <div class="qopts">${quizPerm[qi].map((orig,oi)=>`<button class="qopt" id="q${qi}o${oi}" onclick="pickOpt(${qi},${oi})"><span class="ltr">${QLET[oi]})</span>${q.opts[orig]}</button>`).join('')}</div>
+      <div class="qexp" id="qexp${qi}"></div>
+    </div>`).join('')}
+    <div class="quizfoot" id="quizfoot">
+      <button class="primary qcheckbtn" id="qcheck" onclick="checkQuiz()" disabled>Проверить · 0 / ${qs.length}</button>
+    </div>
+  </div>`;
+}
+function pickOpt(qi,oi){
+  if(quizChecked)return;
+  quizSel[qi]=oi;
+  TESTS[quizSec][qi].opts.forEach((o,i)=>document.getElementById('q'+qi+'o'+i).classList.toggle('sel',i===oi));
+  const qs=TESTS[quizSec],done=Object.keys(quizSel).length,btn=document.getElementById('qcheck');
+  if(btn){btn.textContent=`Проверить · ${done} / ${qs.length}`;btn.disabled=done<qs.length;}
+}
+function checkQuiz(){
+  const qs=TESTS[quizSec];if(!qs)return;
+  if(Object.keys(quizSel).length<qs.length)return;
+  quizChecked=true;let score=0;
+  document.getElementById('quizroot').classList.add('checked');
+  qs.forEach((q,qi)=>{
+    const correctDisp=quizPerm[qi].indexOf(q.correct);
+    const picked=quizSel[qi],ok=picked===correctDisp;if(ok)score++;
+    q.opts.forEach((o,oi)=>{const b=document.getElementById('q'+qi+'o'+oi);b.classList.remove('sel');
+      if(oi===correctDisp){b.classList.add('right');b.insertAdjacentHTML('beforeend','<span class="verdict">✓ верно</span>');}
+      else if(picked===oi){b.classList.add('wrong');b.insertAdjacentHTML('beforeend','<span class="verdict">✗ ваш ответ</span>');}
+      else b.classList.add('faded');});
+    document.getElementById('qitem'+qi).classList.add(ok?'ok':'bad');
+    const ex=document.getElementById('qexp'+qi);ex.innerHTML=`<b>Ответ: ${QLET[correctDisp]}.</b> ${q.exp}`;ex.classList.add('show');
+  });
+  saveTest(quizSec,score);
+  const pass=score===qs.length,nx=nextCourseKey();
+  document.getElementById('quizfoot').innerHTML=`<div class="qsummary ${pass?'ok':'bad'}">
+    <div class="big">${score} / ${qs.length}</div>
+    <div class="msg">${pass?'✓ Раздел пройден — засчитан в прогрессе на Главной.':'Чтобы зачесть раздел, нужно '+qs.length+' из '+qs.length+'. Разбери ошибки и попробуй снова.'}</div>
+    <div class="acts">
+      ${pass?(nx?`<button class="primary" onclick="goNextCourse()">Следующий раздел →</button>`:'')
+            :`<button class="primary" onclick="scrollFirstWrong()">К ошибкам ↓</button>`}
+      <button class="ghost" onclick="resetQuiz()">Пройти заново</button>
+    </div>
+  </div>`;
+  renderToc();renderDashboard();
+  document.getElementById('quizfoot').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function resetQuiz(){renderQuiz(quizSec);const b=document.getElementById('quizbox');if(b)b.scrollIntoView({behavior:'smooth',block:'start'});}
+function scrollFirstWrong(){const qs=TESTS[quizSec];for(let i=0;i<qs.length;i++){if(quizSel[i]!==quizPerm[i].indexOf(qs[i].correct)){document.getElementById('qitem'+i).scrollIntoView({behavior:'smooth',block:'center'});return;}}}
+function nextCourseKey(){const ord=courseOrder();const i=ord.findIndex(x=>x.type==='sec'&&x.key===quizSec);return (i>=0&&i<ord.length-1)?ord[i+1]:null;}
+function goNextCourse(){const nx=nextCourseKey();if(nx)openDoc(nx.type,nx.key);}
+
+/* ==================== ДАШБОРД (главная) ==================== */
+/* ---- аналитика ---- */
+const BTIME='msg_time_v1',BDAYS='msg_days_v1',BGRADES='msg_grades_v1';
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+function markActive(){let days;try{days=JSON.parse(localStorage.getItem(BDAYS))||[];}catch(e){days=[];}const t=todayStr();if(!days.includes(t)){days.push(t);localStorage.setItem(BDAYS,JSON.stringify(days));}}
+function streakDays(){let days;try{days=JSON.parse(localStorage.getItem(BDAYS))||[];}catch(e){days=[];}const set=new Set(days);let s=0,d=new Date();const k=x=>x.getFullYear()+'-'+(x.getMonth()+1)+'-'+x.getDate();if(!set.has(k(d)))d.setDate(d.getDate()-1);while(set.has(k(d))){s++;d.setDate(d.getDate()-1);}return s;}
+function gradesCount(){return +localStorage.getItem(BGRADES)||0;}
+function bumpGrades(){localStorage.setItem(BGRADES,gradesCount()+1);}
+function fmtTime(sec){const m=Math.round(sec/60);if(m<1)return '< 1 мин';if(m<60)return m+' мин';const h=Math.floor(m/60);return h+' ч '+(m%60)+' м';}
+function pluralDay(n){const a=n%10,b=n%100;if(a===1&&b!==11)return 'день подряд';if(a>=2&&a<=4&&(b<10||b>=20))return 'дня подряд';return 'дней подряд';}
+let _timeAcc=+localStorage.getItem(BTIME)||0;
+setInterval(()=>{if(document.visibilityState==='visible'){_timeAcc+=10;localStorage.setItem(BTIME,_timeAcc);}},10000);
+
+function pillarStats(){
+  const secNums=Object.keys(COURSE.sections);
+  const totalSec=secNums.length;
+  const passed=secNums.filter(n=>secPassed(n)).length;
+  const courseKnow=totalSec?secNums.reduce((a,n)=>a+secFrac(n),0)/totalSec:0;
+  const lvlsDone=LEVELS.filter(l=>{const b=bestStore()[l.id];return b&&b.complete;}).length;
+  const s=srStore(); let mastery=0;
+  Q.forEach((c,i)=>{const cs=s[srKey(i)];if(cs)mastery+=Math.max(0,Math.min(1,(cs.interval||0)/7));});
+  const idx=Q.map((c,i)=>i);
+  return {totalSec,passed,courseFrac:totalSec?passed/totalSec:0,courseKnow,
+          lvlsDone,buildFrac:lvlsDone/LEVELS.length,
+          cardsFrac:Q.length?mastery/Q.length:0,
+          dueNow:idx.filter(isDue).length,seen:idx.filter(i=>!isNew(i)).length};
+}
+function renderDashboard(){
+  markActive();
+  const st=pillarStats();
+  const readiness=Math.round(100*(0.35*st.courseKnow+0.30*st.buildFrac+0.35*st.cardsFrac));
+  let label,sub;
+  if(readiness<25){label='Старт';sub='Только начинаешь. Пройди первые разделы курса и собери скелет схемы по памяти.';}
+  else if(readiness<55){label='Разогрев';sub='База набирается. Дожимай карточки на повторе и наращивай схему по уровням.';}
+  else if(readiness<80){label='Уверенно';sub='Хорошая форма. Закрывай слабые разделы и гоняй полную схему без подсказок.';}
+  else{label='Готова';sub='Ты почти у цели. Держи карточки на повторе и прогоняй сценарии звонков и E2EE на карте.';}
+  document.getElementById('hero').innerHTML=`
+    <div class="ring" style="--p:${readiness}"><div class="hole"><b>${readiness}</b><small>ГОТОВНОСТЬ</small></div></div>
+    <div class="meta">
+      <span class="lvlbadge">Уровень: ${label}</span>
+      <h2>Готовность к интервью</h2>
+      <p>${sub}</p>
+    </div>`;
+  const sd=streakDays();
+  document.getElementById('stats').innerHTML=[
+    {ic:'⏱',v:fmtTime(_timeAcc),l:'в тренажёре'},
+    {ic:'🔥',v:sd,l:pluralDay(sd)},
+    {ic:'✅',v:`${st.passed} / ${st.totalSec}`,l:'тестов сдано'},
+    {ic:'🔁',v:gradesCount(),l:'повторов карточек'},
+  ].map(s=>`<div class="stat-tile"><span class="ic">${s.ic}</span><span class="v">${s.v}</span><span class="l">${s.l}</span></div>`).join('');
+  const courseDone=st.passed>=st.totalSec;
+  const pillars=[
+    {cls:'k-course',ic:'📖',t:'Курс',frac:st.courseKnow,big:`<b>${st.passed}</b> / ${st.totalSec} разделов пройдено`,
+     btn:courseDone?'Перечитать курс →':'Продолжить курс →',act:'continueCourse()',prim:!courseDone},
+    {cls:'k-build',ic:'🧩',t:'Схема',frac:st.buildFrac,big:`<b>${st.lvlsDone}</b> / ${LEVELS.length} уровней собрано`,
+     btn:'Тренировать сборку →',act:"goTab('build')",prim:false},
+    {cls:'k-cards',ic:'🃏',t:'Карточки',frac:st.cardsFrac,
+     big:st.dueNow?`<b>${st.dueNow}</b> к повтору · ${st.seen}/${Q.length} изучено`:`<b>${st.seen}</b> / ${Q.length} изучено`,
+     btn:st.dueNow?`Повторить ${st.dueNow} →`:'Учить карточки →',act:'startCards()',prim:st.dueNow>0},
+  ];
+  document.getElementById('pillars').innerHTML=pillars.map(p=>`
+    <div class="pcard ${p.cls}">
+      <div class="ic">${p.ic}</div><h3>${p.t}</h3>
+      <div class="big">${p.big}</div>
+      <div class="bar"><i style="width:${Math.round(p.frac*100)}%"></i></div>
+      <div class="spacer"></div>
+      <button class="${p.prim?'primary':''}" onclick="${p.act}">${p.btn}</button>
+    </div>`).join('');
+}
+function continueCourse(){const nx=courseOrder().find(x=>x.type==='sec'&&!secPassed(x.key))||courseOrder()[0];goTab('course');openDoc(nx.type,nx.key);}
+function startCards(){goTab('cards');document.getElementById('btnStudy').click();}
+/* ---- экспорт / импорт / сброс прогресса ---- */
+const PROGRESS_KEYS=[READ,SR,SR_V1,BSTORE,TST,BLVL,BTIME,BDAYS,BGRADES];
+function exportProgress(){
+  const data={_app:'messenger-trainer',_exported:new Date().toISOString()};
+  PROGRESS_KEYS.forEach(k=>{const v=localStorage.getItem(k);if(v!=null)data[k]=v;});
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='messenger-trainer-progress-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();URL.revokeObjectURL(a.href);
+}
+function importProgress(file){
+  const r=new FileReader();
+  r.onload=()=>{
+    let data;try{data=JSON.parse(r.result);}catch(e){alert('Не получилось прочитать файл: это не JSON.');return;}
+    if(data._app!=='messenger-trainer'){alert('Это не файл прогресса тренажёра.');return;}
+    if(!confirm('Импорт заменит текущий прогресс данными из файла. Продолжить?'))return;
+    PROGRESS_KEYS.forEach(k=>{typeof data[k]==='string'?localStorage.setItem(k,data[k]):localStorage.removeItem(k);});
+    location.reload();
+  };
+  r.readAsText(file);
+}
+function resetAll(){
+  if(!confirm('Сбросить ВЕСЬ прогресс — пройденные разделы курса, собранные уровни схемы и карточки? Действие необратимо.'))return;
+  PROGRESS_KEYS.forEach(k=>localStorage.removeItem(k));_timeAcc=0;
+  queue=[];qPos=0;secSel='all';curLevel=0;startLevel(true);renderCardsSide();renderToc();renderDashboard();
+  if(curDoc&&curDoc.startsWith('sec:'))renderQuiz(curDoc.slice(4));
+  alert('Прогресс сброшен.');
+}
+
+/* ==================== КАРТА (нативная) ==================== */
+(function(){
+  const MD=window.MAPDATA; if(!MD) return;
+  const N=MD.NODES,L=MD.LINKS,INFO=MD.INFO,SCN=MD.SCENARIOS,CATS=MD.CAT_ORDER,LN=MD.LAYER_NAME;
+  const LV={client:'--client',edge:'--edge',core:'--core',store:'--store',scale:'--scale',push:'--push',rtc:'--rtc'};
+  const svgm=document.getElementById('mapSvg');
+  const linksG=document.getElementById('mlinks'),nodesG=document.getElementById('mnodes'),panel=document.getElementById('mpanel');
+  const cap=document.getElementById('mcap'),capStep=document.getElementById('mcapStep'),capText=document.getElementById('mcapText'),stepNo=document.getElementById('mStepNo');
+  const btnPrev=document.getElementById('mPrev'),btnNext=document.getElementById('mNext'),sel=document.getElementById('scnSelect');
+  const btnPlay=document.getElementById('mPlay'),dotsEl=document.getElementById('mDots');
+  const LE={}; L.forEach(l=>LE[l.id]=[l.a[0],l.b[0]]);
+  const linkEls={},nodeEls={}; let curScn=null,stepIdx=0,mode=null,autoTimer=null;
+  function anchor(id,side,t){const n=N[id];t=(t===undefined)?.5:t;
+    if(side==='L')return[n.x,n.y+n.h*t];if(side==='R')return[n.x+n.w,n.y+n.h*t];
+    if(side==='T')return[n.x+n.w*t,n.y];return[n.x+n.w*t,n.y+n.h];}
+  function cyl(x,y,w,h,ry){const rx=w/2,t=y+ry,b=y+h-ry;return `M${x},${t} L${x},${b} A${rx},${ry} 0 0 0 ${x+w},${b} L${x+w},${t} A${rx},${ry} 0 0 1 ${x},${t} Z`;}
+  L.forEach(l=>{
+    const[ax,ay]=anchor(...l.a),[bx,by]=anchor(...l.b);
+    const cls='link'+(l.dashed?' dashed':'')+(l.rtc?' rtc':'');
+    const p=l.cp?el('path',{d:`M${ax},${ay} Q${l.cp[0]},${l.cp[1]} ${bx},${by}`,class:cls,'marker-end':'url(#marrow)'})
+                :el('line',{x1:ax,y1:ay,x2:bx,y2:by,class:cls,'marker-end':'url(#marrow)'});
+    linkEls[l.id]=p;linksG.appendChild(p);
+  });
+  for(const id in N){
+    const n=N[id],shape=n.shape||'rect',col=`var(${LV[n.layer]})`;
+    const g=el('g',{class:'node'+(n.isnew?' isnew':'')});g.dataset.id=id;g.style.color=col;let shiftY=0;
+    if(shape==='cyl'){const ry=Math.min(8,n.h*0.16);
+      g.appendChild(el('path',{d:cyl(n.x,n.y,n.w,n.h,ry),class:'shape',fill:'#fff',stroke:col,'stroke-width':1.6}));
+      g.appendChild(el('ellipse',{cx:n.x+n.w/2,cy:n.y+ry,rx:n.w/2,ry:ry,class:'lid',fill:'#eef2f9',stroke:col,'stroke-width':1.6}));shiftY=-2;
+    }else if(shape==='queue'){
+      g.appendChild(el('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:11,class:'shape',fill:'#fff',stroke:col,'stroke-width':1.6}));
+      [0.32,0.5,0.68].forEach(f=>{const lx=n.x+n.w*f;g.appendChild(el('line',{x1:lx,y1:n.y+9,x2:lx,y2:n.y+n.h-9,class:'qline'}));});
+    }else{
+      g.appendChild(el('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:11,class:'shape',fill:'#fff',stroke:col,'stroke-width':1.6}));
+      if(n.layer==='client')g.appendChild(el('rect',{x:n.x+9,y:n.y+5,width:n.w-18,height:4,rx:2,class:'titlebar',fill:col}));
+    }
+    const cy=n.y+n.h/2+shiftY;
+    const t1=el('text',{x:n.x+n.w/2,y:cy-9,'text-anchor':'middle',class:'label'});t1.textContent=n.label;
+    const t2=el('text',{x:n.x+n.w/2,y:cy+5,'text-anchor':'middle',class:'sub'});t2.textContent=n.sub;
+    const t3=el('text',{x:n.x+n.w/2,y:cy+18,'text-anchor':'middle',class:'tech'});t3.textContent=n.tech;
+    g.appendChild(t1);g.appendChild(t2);g.appendChild(t3);
+    g.addEventListener('click',e=>{e.stopPropagation();selectNode(id);});
+    nodeEls[id]=g;nodesG.appendChild(g);
+  }
+  document.getElementById('mlegend').innerHTML=Object.keys(LV).map(k=>`<span><i style="background:var(${LV[k]})"></i>${LN[k]}</span>`).join('')+'<span>⬭ хранилище · ▥ очередь · ▔ клиент</span>';
+  let opts='<option value="">— выбери прогон —</option>';
+  CATS.forEach(cat=>{opts+=`<optgroup label="${cat}">`+SCN.filter(s=>s.cat===cat).map(s=>`<option value="${s.id}">${s.n}. ${s.title}</option>`).join('')+'</optgroup>';});
+  sel.innerHTML=opts;
+  sel.onchange=()=>{sel.value?startScenario(sel.value):fullReset();};
+  function clearC(){
+    for(const id in nodeEls)nodeEls[id].classList.remove('dim','hl','active','sel','act-status','act-rtc');
+    for(const id in linkEls){linkEls[id].classList.remove('dim','active','statusline','rtcline');linkEls[id].setAttribute('marker-end','url(#marrow)');}
+    cap.classList.remove('rtc');
+  }
+  function fullReset(){stopAuto();mode=null;curScn=null;stepIdx=0;clearC();cap.classList.remove('show');sel.value='';dotsEl.innerHTML='';
+    panel.innerHTML=`<span class="tag">Подсказка</span><h3>Карта архитектуры</h3><p class="hint">Кликни по любому компоненту — что он делает и зачем. Или выбери <b>сценарий</b> выше и пройди его по шагам: кнопками, стрелками ← → на клавиатуре или «▶ Авто». Пунктирные узлы — сервисные надстройки; розовая зона внизу — медиа-тракт звонков (RTC).</p>`;}
+  function selectNode(id){stopAuto();mode='node';clearC();cap.classList.remove('show');sel.value='';dotsEl.innerHTML='';
+    nodeEls[id].classList.add('sel');const n=N[id],i=INFO[id];
+    panel.innerHTML=`<span class="tag">${LN[n.layer]}</span><h3>${n.label}</h3><div class="secref">${i.sec}</div>
+      <div class="row"><b>Что делает</b><span>${i.what}</span></div>
+      <div class="row"><b>Зачем нужен</b><span>${i.why}</span></div>
+      <div class="row"><b>Технологии</b><span>${n.tech}</span></div>`;}
+  function startScenario(id){stopAuto();mode='scn';curScn=SCN.find(s=>s.id===id);stepIdx=0;clearC();cap.classList.add('show');
+    panel.innerHTML=`<span class="tag">${curScn.cat}</span><h3>${curScn.title}</h3><div class="secref">${curScn.sub}</div>
+      <div class="row"><b>Что показываем</b><span>${curScn.intro}</span></div>`;
+    renderDots();renderStep();}
+  function renderDots(){dotsEl.innerHTML='';curScn.steps.forEach((s,i)=>{const b=document.createElement('button');b.className='dot';b.title='Шаг '+(i+1);b.onclick=()=>{stopAuto();stepIdx=i;renderStep();};dotsEl.appendChild(b);});}
+  function renderStep(){const steps=curScn.steps,st=steps[stepIdx];
+    for(const id in nodeEls){nodeEls[id].classList.remove('hl','active','sel','act-status','act-rtc');nodeEls[id].classList.add('dim');}
+    for(const id in linkEls){linkEls[id].classList.remove('active','statusline','rtcline');linkEls[id].classList.add('dim');linkEls[id].setAttribute('marker-end','url(#marrow)');}
+    st.nodes.forEach(id=>{const e=nodeEls[id];if(!e)return;e.classList.remove('dim');e.classList.add('active');if(st.status)e.classList.add('act-status');if(st.rtc)e.classList.add('act-rtc');});
+    st.links.forEach(id=>{const l=linkEls[id];if(!l)return;l.classList.remove('dim');l.classList.add('active');if(st.status)l.classList.add('statusline');if(st.rtc)l.classList.add('rtcline');l.setAttribute('marker-end','url(#marrowA)');
+      const e=LE[id];if(e)e.forEach(nn=>{const ne=nodeEls[nn];if(ne)ne.classList.remove('dim');});});
+    cap.classList.toggle('rtc',!!st.rtc);
+    capStep.textContent=`Шаг ${stepIdx+1} / ${steps.length}`;capText.textContent=st.cap;stepNo.textContent=`${stepIdx+1} / ${steps.length}`;
+    btnPrev.disabled=stepIdx===0;btnNext.disabled=stepIdx===steps.length-1;
+    [...dotsEl.children].forEach((d,i)=>d.className='dot'+(i===stepIdx?' on':(i<stepIdx?' done':'')));}
+  function stopAuto(){if(autoTimer){clearInterval(autoTimer);autoTimer=null;}btnPlay.textContent='▶ Авто';}
+  function toggleAuto(){if(autoTimer){stopAuto();return;}if(!curScn)return;
+    if(stepIdx>=curScn.steps.length-1)stepIdx=0;renderStep();btnPlay.textContent='⏸ Пауза';
+    autoTimer=setInterval(()=>{if(stepIdx<curScn.steps.length-1){stepIdx++;renderStep();}else{stopAuto();}},2600);}
+  btnNext.onclick=()=>{stopAuto();if(curScn&&stepIdx<curScn.steps.length-1){stepIdx++;renderStep();}};
+  btnPrev.onclick=()=>{stopAuto();if(curScn&&stepIdx>0){stepIdx--;renderStep();}};
+  btnPlay.onclick=toggleAuto;
+  document.getElementById('mReset').onclick=fullReset;
+  svgm.addEventListener('click',()=>{if(mode==='node')fullReset();});
+  document.addEventListener('keydown',e=>{
+    if(!document.getElementById('view-map').classList.contains('on')||!curScn)return;
+    if(e.key==='ArrowRight'){e.preventDefault();stopAuto();if(stepIdx<curScn.steps.length-1){stepIdx++;renderStep();}}
+    else if(e.key==='ArrowLeft'){e.preventDefault();stopAuto();if(stepIdx>0){stepIdx--;renderStep();}}
+  });
+  fullReset();
+})();
+
+/* ==================== INIT ==================== */
+renderLevels(); startLevel(); renderCardsSide(); renderToc(); renderDashboard();
+applyHash();
