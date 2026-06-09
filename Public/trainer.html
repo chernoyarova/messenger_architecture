@@ -185,17 +185,28 @@
   a.lnk{color:var(--edge);text-decoration:none;} a.lnk:hover{text-decoration:underline;}
 
   /* ====== DASHBOARD ====== */
-  .hero{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px 26px;display:flex;gap:26px;align-items:center;flex-wrap:wrap;margin-bottom:16px;box-shadow:0 1px 2px rgba(20,30,55,.04);}
-  .ring{position:relative;width:138px;height:138px;border-radius:50%;flex:none;
-    background:conic-gradient(var(--edge) calc(var(--p,0)*3.6deg), var(--bg2) 0);}
+  .hero{position:relative;overflow:hidden;background:
+      radial-gradient(120% 140% at 0% 0%, rgba(47,107,255,.10), transparent 45%),
+      radial-gradient(120% 140% at 100% 100%, rgba(91,99,230,.10), transparent 45%),
+      var(--panel);
+    border:1px solid var(--line);border-radius:20px;padding:26px 28px;display:flex;gap:28px;align-items:center;flex-wrap:wrap;margin-bottom:14px;box-shadow:0 6px 24px rgba(20,30,55,.06);}
+  .ring{position:relative;width:142px;height:142px;border-radius:50%;flex:none;
+    background:conic-gradient(from -90deg, var(--edge) calc(var(--p,0)*3.6deg), var(--bg2) 0);
+    box-shadow:0 4px 16px rgba(47,107,255,.18);}
   .ring .hole{position:absolute;inset:13px;background:var(--panel);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-  .ring .hole b{font-size:40px;font-weight:900;line-height:1;color:var(--ink);}
-  .ring .hole small{font-size:12px;color:var(--muted2);margin-top:3px;letter-spacing:.5px;}
+  .ring .hole b{font-size:42px;font-weight:900;line-height:1;color:var(--ink);}
+  .ring .hole small{font-size:11px;color:var(--muted2);margin-top:3px;letter-spacing:1px;}
   .hero .meta{flex:1;min-width:230px;}
-  .hero .meta .lvlbadge{display:inline-block;font-size:12px;font-weight:700;color:var(--edge);background:#e9f0ff;border:1px solid #cfe0ff;border-radius:20px;padding:4px 12px;margin-bottom:10px;}
-  .hero .meta h2{margin:0 0 6px;font-size:24px;font-weight:900;letter-spacing:-.3px;}
-  .hero .meta p{margin:0;color:var(--muted);font-size:14px;line-height:1.5;}
-  .hero .meta .next{margin-top:14px;}
+  .hero .meta .lvlbadge{display:inline-block;font-size:11.5px;font-weight:700;color:var(--edge);background:#e9f0ff;border:1px solid #cfe0ff;border-radius:20px;padding:4px 13px;margin-bottom:11px;letter-spacing:.2px;}
+  .hero .meta h2{margin:0 0 6px;font-size:25px;font-weight:900;letter-spacing:-.4px;}
+  .hero .meta p{margin:0;color:var(--muted);font-size:14px;line-height:1.5;max-width:46ch;}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+  @media(max-width:680px){.stats{grid-template-columns:repeat(2,1fr);}}
+  .stat-tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 1px 2px rgba(20,30,55,.04);}
+  .stat-tile .ic{font-size:17px;line-height:1;}
+  .stat-tile .v{display:block;font-size:23px;font-weight:900;color:var(--ink);line-height:1.1;margin-top:7px;}
+  .stat-tile .l{font-size:12px;color:var(--muted);}
 
   .pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
   @media(max-width:780px){.pillars{grid-template-columns:1fr;}}
@@ -355,6 +366,7 @@
   <!-- ============ HOME (DASHBOARD) ============ -->
   <section class="view on" id="view-home">
     <div class="hero" id="hero"></div>
+    <div class="stats" id="stats"></div>
     <div class="pillars" id="pillars"></div>
     <div style="text-align:center;margin-top:20px;"><button class="linkbtn" style="display:inline-block;width:auto;padding:6px 12px;" onclick="resetAll()">↺ Сбросить весь прогресс</button></div>
   </section>
@@ -599,11 +611,19 @@ function renderSolved(best){
   updateScore(); renderLegend();
   document.getElementById('phaseTag').innerHTML='<span class="fnum">✓ Собрано</span> · уровень пройден';
   document.getElementById('paletteTitle').textContent='Готово';
-  document.getElementById('paletteBox').innerHTML=`<div class="empty">Уровень уже собран ✓<br>Лучший результат — ошибок: ${best.miss}.</div><button class="primary" id="btnRedo" style="width:100%;margin-top:4px;">Пройти заново</button>`;
-  document.getElementById('btnRedo').onclick=()=>startLevel(true);
+  levelDoneActions(`Уровень уже собран ✓ Лучший результат — ошибок: ${best.miss}.`);
   const bn=document.getElementById('doneBanner');
-  bn.textContent=`✓ Уровень «${LEVELS[curLevel].name}» пройден. Можешь пройти заново или взять следующий уровень сверху.`;
+  bn.textContent=`✓ Уровень «${LEVELS[curLevel].name}» пройден. Можешь пройти заново или взять следующий уровень.`;
   bn.classList.add('show');
+}
+function levelDoneActions(note){
+  const hasNext=curLevel<LEVELS.length-1;
+  const box=document.getElementById('paletteBox');
+  box.innerHTML=(note?`<div class="empty">${note}</div>`:'')
+    +(hasNext?`<button class="primary" id="btnNextLvl" style="width:100%;">Следующий уровень →</button>`:`<div class="empty">Это полная схема — собрано! 🎉</div>`)
+    +`<button class="ghost" id="btnRedo" style="width:100%;margin-top:8px;">Пройти заново</button>`;
+  if(hasNext)document.getElementById('btnNextLvl').onclick=()=>{curLevel++;startLevel();};
+  document.getElementById('btnRedo').onclick=()=>startLevel(true);
 }
 
 function viewBox(){
@@ -751,8 +771,11 @@ function checkLinksDone(){
     if(!prev||missCount<prev.miss) best[lv]=score; else best[lv].complete=true;
     saveBest(best);
     const bn=document.getElementById('doneBanner');
-    bn.textContent=`✓ Уровень «${LEVELS[curLevel].name}» собран! Ошибок: ${missCount}.`+(curLevel<LEVELS.length-1?' Жми следующий уровень сверху.':' Это полная схема — теперь по памяти и без подсказок.');
+    bn.textContent=`✓ Уровень «${LEVELS[curLevel].name}» собран! Ошибок: ${missCount}.`;
     bn.classList.add('show'); renderLevels();
+    document.getElementById('phaseTag').innerHTML='<span class="fnum">✓ Собрано</span> · уровень пройден';
+    document.getElementById('paletteTitle').textContent='Готово';
+    levelDoneActions(`Готово! Ошибок: ${missCount}.`);
   }
 }
 
@@ -895,7 +918,7 @@ function grade(g){
   else if(g===1){ c.ease=Math.max(1.3,c.ease-0.15); c.interval=Math.max(1,(c.interval||1)*1.2); c.reps++; c.due=Date.now()+c.interval*DAY; }
   else if(g===2){ c.interval=c.reps===0?1:(c.reps===1?3:Math.round((c.interval||1)*c.ease)); c.reps++; c.due=Date.now()+c.interval*DAY; }
   else { c.ease=c.ease+0.15; c.interval=Math.round((c.interval||1)*c.ease*1.3); c.reps++; c.due=Date.now()+c.interval*DAY; }
-  s[i]=c; srSave(s);
+  s[i]=c; srSave(s); bumpGrades();
   if(g===0) queue.push(i); // показать снова в конце сессии
   qPos++; showCard(); renderCardsSide();
 }
@@ -1044,6 +1067,18 @@ function nextCourseKey(){const ord=courseOrder();const i=ord.findIndex(x=>x.type
 function goNextCourse(){const nx=nextCourseKey();if(nx)openDoc(nx.type,nx.key);}
 
 /* ==================== ДАШБОРД (главная) ==================== */
+/* ---- аналитика ---- */
+const BTIME='msg_time_v1',BDAYS='msg_days_v1',BGRADES='msg_grades_v1';
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+function markActive(){let days;try{days=JSON.parse(localStorage.getItem(BDAYS))||[];}catch(e){days=[];}const t=todayStr();if(!days.includes(t)){days.push(t);localStorage.setItem(BDAYS,JSON.stringify(days));}}
+function streakDays(){let days;try{days=JSON.parse(localStorage.getItem(BDAYS))||[];}catch(e){days=[];}const set=new Set(days);let s=0,d=new Date();const k=x=>x.getFullYear()+'-'+(x.getMonth()+1)+'-'+x.getDate();if(!set.has(k(d)))d.setDate(d.getDate()-1);while(set.has(k(d))){s++;d.setDate(d.getDate()-1);}return s;}
+function gradesCount(){return +localStorage.getItem(BGRADES)||0;}
+function bumpGrades(){localStorage.setItem(BGRADES,gradesCount()+1);}
+function fmtTime(sec){const m=Math.round(sec/60);if(m<1)return '< 1 мин';if(m<60)return m+' мин';const h=Math.floor(m/60);return h+' ч '+(m%60)+' м';}
+function pluralDay(n){const a=n%10,b=n%100;if(a===1&&b!==11)return 'день подряд';if(a>=2&&a<=4&&(b<10||b>=20))return 'дня подряд';return 'дней подряд';}
+let _timeAcc=+localStorage.getItem(BTIME)||0;
+setInterval(()=>{if(document.visibilityState==='visible'){_timeAcc+=10;localStorage.setItem(BTIME,_timeAcc);}},10000);
+
 function pillarStats(){
   const secNums=Object.keys(COURSE.sections);
   const totalSec=secNums.length;
@@ -1059,6 +1094,7 @@ function pillarStats(){
           dueNow:idx.filter(isDue).length,seen:idx.filter(i=>!isNew(i)).length};
 }
 function renderDashboard(){
+  markActive();
   const st=pillarStats();
   const readiness=Math.round(100*(0.35*st.courseKnow+0.30*st.buildFrac+0.35*st.cardsFrac));
   let label,sub;
@@ -1066,19 +1102,24 @@ function renderDashboard(){
   else if(readiness<55){label='Разогрев';sub='База набирается. Дожимай карточки на повторе и наращивай схему по уровням.';}
   else if(readiness<80){label='Уверенно';sub='Хорошая форма. Закрывай слабые разделы и гоняй полную схему без подсказок.';}
   else{label='Готова';sub='Ты почти у цели. Держи карточки на повторе и прогоняй сценарии звонков и E2EE на карте.';}
-  const weak=[['курс',st.courseKnow,'course'],['схему',st.buildFrac,'build'],['карточки',st.cardsFrac,'cards']].sort((a,b)=>a[1]-b[1])[0];
   document.getElementById('hero').innerHTML=`
     <div class="ring" style="--p:${readiness}"><div class="hole"><b>${readiness}</b><small>ГОТОВНОСТЬ</small></div></div>
     <div class="meta">
-      <span class="lvlbadge">${label}</span>
+      <span class="lvlbadge">Уровень: ${label}</span>
       <h2>Готовность к интервью</h2>
       <p>${sub}</p>
-      <div class="next"><button class="primary" onclick="goTab('${weak[2]}')">Подтянуть ${weak[0]} →</button></div>
     </div>`;
-  const nextSec=courseOrder().find(x=>x.type==='sec'&&!secPassed(x.key));
+  const sd=streakDays();
+  document.getElementById('stats').innerHTML=[
+    {ic:'⏱',v:fmtTime(_timeAcc),l:'в тренажёре'},
+    {ic:'🔥',v:sd,l:pluralDay(sd)},
+    {ic:'✅',v:`${st.passed} / ${st.totalSec}`,l:'тестов сдано'},
+    {ic:'🔁',v:gradesCount(),l:'повторов карточек'},
+  ].map(s=>`<div class="stat-tile"><span class="ic">${s.ic}</span><span class="v">${s.v}</span><span class="l">${s.l}</span></div>`).join('');
+  const courseDone=st.passed>=st.totalSec;
   const pillars=[
     {cls:'k-course',ic:'📖',t:'Курс',frac:st.courseKnow,big:`<b>${st.passed}</b> / ${st.totalSec} разделов пройдено`,
-     btn:nextSec?'Продолжить курс →':'Перечитать курс →',act:'continueCourse()',prim:false},
+     btn:courseDone?'Перечитать курс →':'Продолжить курс →',act:'continueCourse()',prim:!courseDone},
     {cls:'k-build',ic:'🧩',t:'Схема',frac:st.buildFrac,big:`<b>${st.lvlsDone}</b> / ${LEVELS.length} уровней собрано`,
      btn:'Тренировать сборку →',act:"goTab('build')",prim:false},
     {cls:'k-cards',ic:'🃏',t:'Карточки',frac:st.cardsFrac,
@@ -1098,8 +1139,8 @@ function continueCourse(){const nx=courseOrder().find(x=>x.type==='sec'&&!secPas
 function startCards(){goTab('cards');document.getElementById('btnStudy').click();}
 function resetAll(){
   if(!confirm('Сбросить ВЕСЬ прогресс — пройденные разделы курса, собранные уровни схемы и карточки? Действие необратимо.'))return;
-  localStorage.removeItem(READ);localStorage.removeItem(SR);localStorage.removeItem(BSTORE);localStorage.removeItem(TST);
-  queue=[];qPos=0;secSel='all';curLevel=0;startLevel();renderCardsSide();renderToc();renderDashboard();
+  [READ,SR,BSTORE,TST,BLVL,BTIME,BDAYS,BGRADES].forEach(k=>localStorage.removeItem(k));_timeAcc=0;
+  queue=[];qPos=0;secSel='all';curLevel=0;startLevel(true);renderCardsSide();renderToc();renderDashboard();
   if(curDoc&&curDoc.startsWith('sec:'))renderQuiz(curDoc.slice(4));
   alert('Прогресс сброшен.');
 }
