@@ -303,26 +303,36 @@
 
   /* ====== QUIZ ====== */
   .quiz{margin-top:30px;padding-top:22px;border-top:2px solid var(--line);}
-  .quizhead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+  .quiz.checked .qopt{pointer-events:none;}
   .quizhead h2{font-size:19px;font-weight:800;margin:0;}
-  .qscore{font-weight:800;color:var(--edge);font-size:16px;}
-  .quizsub{color:var(--muted);font-size:13px;margin:4px 0 10px;}
-  .qresult{font-size:13.5px;font-weight:600;color:var(--muted);margin-bottom:14px;min-height:1px;}
-  .qresult.ok{color:#0f7a4a;}
-  .qitem{margin-bottom:20px;}
+  .quizsub{color:var(--muted);font-size:13px;margin:5px 0 16px;}
+  .qitem{margin-bottom:20px;padding-left:12px;border-left:3px solid transparent;transition:.2s;}
+  .qitem.ok{border-left-color:var(--good);}
+  .qitem.bad{border-left-color:var(--bad);}
   .qq{font-size:15px;font-weight:700;margin-bottom:9px;line-height:1.4;}
   .qq b{color:var(--edge);margin-right:5px;}
   .qopts{display:flex;flex-direction:column;gap:7px;}
   .qopt{text-align:left;width:100%;background:var(--panel);border:1px solid var(--line);padding:10px 13px;font-weight:500;font-size:13.5px;line-height:1.45;white-space:normal;color:var(--ink);transition:.12s;}
-  .qopt:hover{border-color:var(--edge);color:var(--ink);}
+  .qopt:hover{border-color:var(--edge);}
   .qopt.sel{border-color:var(--edge);background:#eef3ff;}
   .qopt.right{border-color:var(--good);background:#eafaf1;color:#0f7a4a;font-weight:600;}
-  .qopt.wrong{border-color:var(--bad);background:#fdeef3;color:#b42c57;}
+  .qopt.wrong{border-color:var(--bad);background:#fdeef3;color:#b42c57;font-weight:600;}
+  .quiz.checked .qopt.faded{opacity:.45;}
   .qopt .ltr{font-weight:800;margin-right:8px;}
+  .qopt .verdict{float:right;font-size:11px;font-weight:700;margin-left:10px;white-space:nowrap;}
+  .qopt.right .verdict{color:#0f7a4a;} .qopt.wrong .verdict{color:#b42c57;}
   .qexp{display:none;margin-top:9px;font-size:13px;line-height:1.55;color:var(--muted);background:var(--bg2);border-radius:8px;padding:9px 12px;}
   .qexp.show{display:block;}
   .qexp b{color:var(--ink);}
-  .quizfoot{display:flex;gap:8px;margin-top:8px;}
+  .quizfoot{margin-top:18px;}
+  .qcheckbtn{width:100%;}
+  .qsummary{border:1px solid var(--line);border-radius:14px;padding:18px;text-align:center;}
+  .qsummary.ok{border-color:var(--good);background:#f3fbf6;}
+  .qsummary.bad{border-color:#f0c2cf;background:#fdf4f7;}
+  .qsummary .big{font-size:32px;font-weight:900;line-height:1;}
+  .qsummary.ok .big{color:#0f7a4a;} .qsummary.bad .big{color:#b42c57;}
+  .qsummary .msg{font-size:13.5px;color:var(--muted);margin:9px 0 15px;line-height:1.5;}
+  .qsummary .acts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
 </style>
 </head>
 <body>
@@ -917,41 +927,58 @@ function renderQuiz(n){
   const qs=TESTS[String(n)];
   if(!qs||!qs.length){box.innerHTML='';return;}
   quizSec=String(n);quizSel={};quizChecked=false;
-  box.innerHTML=`<div class="quiz">
-    <div class="quizhead"><h2>Тест по разделу</h2><span class="qscore" id="qscore"></span></div>
-    <div class="quizsub">Выбери ответ в каждом из ${qs.length} вопросов, потом нажми «Проверить». Раздел засчитывается пройденным при ${qs.length}/${qs.length}.</div>
-    <div class="qresult" id="qresult"></div>
-    ${qs.map((q,qi)=>`<div class="qitem">
+  box.innerHTML=`<div class="quiz" id="quizroot">
+    <div class="quizhead"><h2>Тест по разделу</h2></div>
+    <div class="quizsub">Ответь на все ${qs.length} вопросов и нажми «Проверить». Раздел засчитывается пройденным при ${qs.length} / ${qs.length}.</div>
+    ${qs.map((q,qi)=>`<div class="qitem" id="qitem${qi}">
       <div class="qq"><b>${qi+1}.</b>${q.q}</div>
       <div class="qopts">${q.opts.map((o,oi)=>`<button class="qopt" id="q${qi}o${oi}" onclick="pickOpt(${qi},${oi})"><span class="ltr">${QLET[oi]})</span>${o}</button>`).join('')}</div>
       <div class="qexp" id="qexp${qi}"></div>
     </div>`).join('')}
-    <div class="quizfoot"><button class="primary" onclick="checkQuiz()">Проверить</button><button class="ghost" onclick="resetQuiz()">Заново</button></div>
+    <div class="quizfoot" id="quizfoot">
+      <button class="primary qcheckbtn" id="qcheck" onclick="checkQuiz()" disabled>Проверить · 0 / ${qs.length}</button>
+    </div>
   </div>`;
 }
 function pickOpt(qi,oi){
   if(quizChecked)return;
   quizSel[qi]=oi;
   TESTS[quizSec][qi].opts.forEach((o,i)=>document.getElementById('q'+qi+'o'+i).classList.toggle('sel',i===oi));
+  const qs=TESTS[quizSec],done=Object.keys(quizSel).length,btn=document.getElementById('qcheck');
+  if(btn){btn.textContent=`Проверить · ${done} / ${qs.length}`;btn.disabled=done<qs.length;}
 }
 function checkQuiz(){
-  const qs=TESTS[quizSec];if(!qs)return;quizChecked=true;let score=0;
+  const qs=TESTS[quizSec];if(!qs)return;
+  if(Object.keys(quizSel).length<qs.length)return;
+  quizChecked=true;let score=0;
+  document.getElementById('quizroot').classList.add('checked');
   qs.forEach((q,qi)=>{
+    const picked=quizSel[qi],ok=picked===q.correct;if(ok)score++;
     q.opts.forEach((o,oi)=>{const b=document.getElementById('q'+qi+'o'+oi);b.classList.remove('sel');
-      if(oi===q.correct)b.classList.add('right');
-      else if(quizSel[qi]===oi)b.classList.add('wrong');});
-    if(quizSel[qi]===q.correct)score++;
-    const ex=document.getElementById('qexp'+qi);ex.innerHTML=`<b>${QLET[q.correct]})</b> ${q.exp}`;ex.classList.add('show');
+      if(oi===q.correct){b.classList.add('right');b.insertAdjacentHTML('beforeend','<span class="verdict">✓ верно</span>');}
+      else if(picked===oi){b.classList.add('wrong');b.insertAdjacentHTML('beforeend','<span class="verdict">✗ ваш ответ</span>');}
+      else b.classList.add('faded');});
+    document.getElementById('qitem'+qi).classList.add(ok?'ok':'bad');
+    const ex=document.getElementById('qexp'+qi);ex.innerHTML=`<b>Ответ: ${QLET[q.correct]}.</b> ${q.exp}`;ex.classList.add('show');
   });
-  const sc=document.getElementById('qscore');sc.textContent=`${score} / ${qs.length}`;
-  sc.style.color=score===qs.length?'var(--good)':(score>=qs.length/2?'var(--edge)':'var(--bad)');
   saveTest(quizSec,score);
-  const res=document.getElementById('qresult');
-  if(score===qs.length){res.className='qresult ok';res.textContent='✓ Раздел пройден — засчитан в прогрессе на Главной.';}
-  else{res.className='qresult';res.textContent=`Чтобы раздел засчитался как пройденный, нужно ${qs.length}/${qs.length}. Разбери ошибки и жми «Заново».`;}
+  const pass=score===qs.length,nx=nextCourseKey();
+  document.getElementById('quizfoot').innerHTML=`<div class="qsummary ${pass?'ok':'bad'}">
+    <div class="big">${score} / ${qs.length}</div>
+    <div class="msg">${pass?'✓ Раздел пройден — засчитан в прогрессе на Главной.':'Чтобы зачесть раздел, нужно '+qs.length+' из '+qs.length+'. Разбери ошибки и попробуй снова.'}</div>
+    <div class="acts">
+      ${pass?(nx?`<button class="primary" onclick="goNextCourse()">Следующий раздел →</button>`:'')
+            :`<button class="primary" onclick="scrollFirstWrong()">К ошибкам ↓</button>`}
+      <button class="ghost" onclick="resetQuiz()">Пройти заново</button>
+    </div>
+  </div>`;
   renderToc();renderDashboard();
+  document.getElementById('quizfoot').scrollIntoView({behavior:'smooth',block:'center'});
 }
-function resetQuiz(){renderQuiz(quizSec);const b=document.getElementById('quizbox');if(b)window.scrollTo({top:b.getBoundingClientRect().top+window.scrollY-70,behavior:'smooth'});}
+function resetQuiz(){renderQuiz(quizSec);const b=document.getElementById('quizbox');if(b)b.scrollIntoView({behavior:'smooth',block:'start'});}
+function scrollFirstWrong(){const qs=TESTS[quizSec];for(let i=0;i<qs.length;i++){if(quizSel[i]!==qs[i].correct){document.getElementById('qitem'+i).scrollIntoView({behavior:'smooth',block:'center'});return;}}}
+function nextCourseKey(){const ord=courseOrder();const i=ord.findIndex(x=>x.type==='sec'&&x.key===quizSec);return (i>=0&&i<ord.length-1)?ord[i+1]:null;}
+function goNextCourse(){const nx=nextCourseKey();if(nx)openDoc(nx.type,nx.key);}
 
 /* ==================== ДАШБОРД (главная) ==================== */
 function pillarStats(){
