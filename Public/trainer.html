@@ -123,9 +123,13 @@
 
   .palette{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;}
   .palette h3{font-size:11px;letter-spacing:.6px;text-transform:uppercase;font-weight:700;color:var(--muted2);margin:0 0 10px;}
-  .chip{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:var(--bg2);border:1px solid var(--line);border-left-width:4px;border-radius:9px;padding:8px 10px;margin-bottom:7px;cursor:pointer;transition:.12s;}
+  .chip{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:var(--bg2);border:1px solid var(--line);border-left-width:4px;border-radius:9px;padding:8px 10px;margin-bottom:7px;cursor:grab;transition:border-color .12s,opacity .12s;touch-action:none;user-select:none;}
   .chip:hover{border-color:var(--edge);}
+  .chip:active{cursor:grabbing;}
   .chip.pick{background:#e3ecfb;border-color:var(--edge);}
+  .chip.dragging{opacity:.35;}
+  .dragghost{position:fixed;transform:translate(-50%,-135%);background:var(--panel);border:1px solid var(--edge);border-left:4px solid var(--edge);border-radius:9px;padding:7px 11px;font-size:12.5px;font-weight:700;color:var(--ink);box-shadow:0 6px 18px rgba(20,30,55,.22);pointer-events:none;z-index:200;white-space:nowrap;}
+  .slot.dragover rect.box{fill:#e3ecfb;stroke-dasharray:none!important;stroke-width:2.8;}
   .chip .nm{font-size:13px;font-weight:700;}
   .chip .sb{display:block;font-weight:400;color:var(--muted);font-size:11px;margin-top:1px;}
   .palette .empty{color:var(--muted2);font-size:13px;line-height:1.5;padding:8px 0;}
@@ -542,12 +546,13 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>goTab(t.dataset.view)
 /* ==================== ИГРА «СОБЕРИ СХЕМУ» ==================== */
 const SVGNS='http://www.w3.org/2000/svg';
 const svg=document.getElementById('boardSvg');
-const BSTORE='msg_build_v1';
-let curLevel=0, levelNodes=[], reqLinks=[], placed={}, phase='place';
-let pickChip=null, pickNode=null, doneLinks=new Set(), missCount=0, hintTimer=null;
+const BSTORE='msg_build_v1', BLVL='msg_build_lvl';
+let curLevel=0, levelNodes=[], reqLinks=[], placed={}, phase='place', paletteOrder=[];
+let pickChip=null, pickNode=null, doneLinks=new Set(), missCount=0, hintTimer=null, drag=null;
 
 function bestStore(){try{return JSON.parse(localStorage.getItem(BSTORE))||{}}catch(e){return {}}}
 function saveBest(o){localStorage.setItem(BSTORE,JSON.stringify(o));}
+(function(){const v=parseInt(localStorage.getItem(BLVL));if(v>=0&&v<LEVELS.length)curLevel=v;})();
 
 function levelSet(idx){let s=[];for(let i=0;i<=idx;i++)s=s.concat(LEVELS[i].add);return s;}
 function el(tag,attrs){const e=document.createElementNS(SVGNS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;}
@@ -568,18 +573,37 @@ document.getElementById('lvlSelect').onchange=e=>{curLevel=+e.target.value;start
 document.getElementById('lvlPrev').onclick=()=>{if(curLevel>0){curLevel--;startLevel();}};
 document.getElementById('lvlNext').onclick=()=>{if(curLevel<LEVELS.length-1){curLevel++;startLevel();}};
 
-function startLevel(){
+function startLevel(fresh){
   levelNodes=levelSet(curLevel);
   const includeRtc=curLevel>=LEVELS.findIndex(l=>l.id==='rtc');
   const setHas=id=>levelNodes.includes(id);
   reqLinks=LINKS.filter(l=>setHas(l[0])&&setHas(l[1])&&(!l[2]||includeRtc));
+  localStorage.setItem(BLVL,curLevel);
+  const done=bestStore()[LEVELS[curLevel].id];
+  if(done&&done.complete&&!fresh){ renderSolved(done); return; }
   placed={}; phase='place'; pickChip=null; pickNode=null; doneLinks=new Set(); missCount=0;
+  paletteOrder=shuffle(levelNodes.slice());
   document.getElementById('doneBanner').classList.remove('show');
   document.getElementById('btnToLinks').style.display='none';
   renderLevels(); renderBoard(); renderPalette(); updateScore();
   document.getElementById('phaseTag').innerHTML='<span class="fnum">Фаза 1</span> · Расставь блоки';
-  document.getElementById('paletteTitle').textContent='Блоки — кликни, потом место на доске';
+  document.getElementById('paletteTitle').textContent='Блоки — перетащи на доску';
   renderLegend();
+}
+function renderSolved(best){
+  placed={}; levelNodes.forEach(id=>placed[id]=true);
+  phase='link'; doneLinks=new Set(reqLinks.map(l=>linkKey(l[0],l[1]))); missCount=0;
+  document.getElementById('btnToLinks').style.display='none';
+  renderLevels(); renderBoard();
+  reqLinks.forEach(l=>drawLink(l[0],l[1],'done'));
+  updateScore(); renderLegend();
+  document.getElementById('phaseTag').innerHTML='<span class="fnum">✓ Собрано</span> · уровень пройден';
+  document.getElementById('paletteTitle').textContent='Готово';
+  document.getElementById('paletteBox').innerHTML=`<div class="empty">Уровень уже собран ✓<br>Лучший результат — ошибок: ${best.miss}.</div><button class="primary" id="btnRedo" style="width:100%;margin-top:4px;">Пройти заново</button>`;
+  document.getElementById('btnRedo').onclick=()=>startLevel(true);
+  const bn=document.getElementById('doneBanner');
+  bn.textContent=`✓ Уровень «${LEVELS[curLevel].name}» пройден. Можешь пройти заново или взять следующий уровень сверху.`;
+  bn.classList.add('show');
 }
 
 function viewBox(){
@@ -618,13 +642,52 @@ function drawPlaced(id){
   svg.appendChild(g);
 }
 
+function placeNode(id){ placed[id]=true; pickChip=null; renderBoard(); renderPalette(); updateScore(); checkPlaceDone(); }
 function onSlotClick(id,g){
   if(phase!=='place') return;
   if(!pickChip){flashBad(g);return;}
-  if(pickChip===id){ placed[id]=true; pickChip=null; renderBoard(); renderPalette(); updateScore(); checkPlaceDone(); }
+  if(pickChip===id){ placeNode(id); }
   else { missCount++; flashBad(g); updateScore(); }
 }
 function flashBad(g){g.classList.add('bad');setTimeout(()=>g.classList.remove('bad'),350);}
+
+/* ---- drag-and-drop блоков ---- */
+function slotAt(x,y){const e=document.elementFromPoint(x,y);const s=e&&e.closest?e.closest('.slot'):null;return s?s.dataset.id:null;}
+function startChipDrag(e,id,chip){
+  if(phase!=='place')return;
+  e.preventDefault();
+  drag={id,chip,sx:e.clientX,sy:e.clientY,moved:false,ghost:null};
+  window.addEventListener('pointermove',onChipMove);
+  window.addEventListener('pointerup',onChipUp);
+}
+function onChipMove(e){
+  if(!drag)return;
+  if(!drag.moved){
+    if(Math.abs(e.clientX-drag.sx)+Math.abs(e.clientY-drag.sy)<6)return;
+    drag.moved=true;
+    const gh=document.createElement('div');gh.className='dragghost';gh.textContent=NODES[drag.id].label;
+    document.body.appendChild(gh);drag.ghost=gh;drag.chip.classList.add('dragging');
+  }
+  drag.ghost.style.left=e.clientX+'px';drag.ghost.style.top=e.clientY+'px';
+  svg.querySelectorAll('.slot.dragover').forEach(s=>s.classList.remove('dragover'));
+  const sid=slotAt(e.clientX,e.clientY);
+  if(sid){const s=[...svg.querySelectorAll('.slot')].find(x=>x.dataset.id===sid);if(s)s.classList.add('dragover');}
+}
+function onChipUp(e){
+  window.removeEventListener('pointermove',onChipMove);
+  window.removeEventListener('pointerup',onChipUp);
+  if(!drag)return;
+  svg.querySelectorAll('.slot.dragover').forEach(s=>s.classList.remove('dragover'));
+  if(drag.ghost)drag.ghost.remove();
+  if(drag.moved){
+    const sid=slotAt(e.clientX,e.clientY);
+    if(sid===drag.id){ placeNode(drag.id); }
+    else if(sid){ missCount++; updateScore(); const s=[...svg.querySelectorAll('.slot')].find(x=>x.dataset.id===sid); if(s)flashBad(s); }
+    drag=null;
+  } else {
+    const id=drag.id; drag=null; pickChip=(pickChip===id?null:id); renderPalette();
+  }
+}
 
 function onNodeClick(id,g){
   if(phase==='place'){ // un-place
@@ -656,14 +719,14 @@ function drawLink(a,b,cls,temp){
 function renderPalette(){
   const box=document.getElementById('paletteBox');box.innerHTML='';
   if(phase==='link'){ box.innerHTML='<div class="empty">Соедини блоки: кликни один, потом второй. Нужно восстановить все связи.</div>'; document.getElementById('btnToLinks').style.display='none'; return; }
-  const remaining=levelNodes.filter(id=>!placed[id]);
+  const remaining=paletteOrder.filter(id=>!placed[id]);
   if(remaining.length===0){ box.innerHTML='<div class="empty">Все блоки на месте ✓</div>'; return; }
-  shuffle(remaining.slice()).forEach(id=>{
+  remaining.forEach(id=>{
     const n=NODES[id],col=LAYERS[n.layer].c;
     const c=document.createElement('button');
-    c.className='chip'+(pickChip===id?' pick':'');c.style.borderLeftColor=col;
+    c.className='chip'+(pickChip===id?' pick':'');c.style.borderLeftColor=col;c.dataset.id=id;
     c.innerHTML=`<span><span class="nm">${n.label}</span><span class="sb">${LAYERS[n.layer].n}</span></span>`;
-    c.onclick=()=>{pickChip=(pickChip===id?null:id);renderPalette();};
+    c.addEventListener('pointerdown',e=>startChipDrag(e,id,c));
     box.appendChild(c);
   });
 }
@@ -703,7 +766,7 @@ function updateScore(){
   document.getElementById('scMiss').textContent=missCount;
 }
 
-document.getElementById('btnReset').onclick=()=>startLevel();
+document.getElementById('btnReset').onclick=()=>startLevel(true);
 document.getElementById('btnHint').onclick=()=>{
   clearTimeout(hintTimer);
   document.querySelectorAll('.glink.hint').forEach(x=>x.remove());
