@@ -472,6 +472,8 @@ function isDue(i){const c=srStore()[srKey(i)];return !c?false:c.due<=Date.now();
 function isNew(i){return !srStore()[srKey(i)];}
 
 let queue=[], qPos=0, secSel='all', revealed=false;
+let cardHist=[]; // история оценок сессии — для «← предыдущая» с откатом SR-состояния
+function inSession(){return queue.length>0&&qPos<queue.length;}
 
 function buildSecFilter(){
   const sel=document.getElementById('secFilter');
@@ -491,6 +493,9 @@ function renderCardsSide(){
   document.getElementById('stDue').textContent=due;
   document.getElementById('stNew').textContent=nw;
   document.getElementById('stSeen').textContent=seen;
+  const btn=document.getElementById('btnStudy');
+  btn.textContent=inSession()?'Завершить сессию':'Начать сессию';
+  btn.classList.toggle('primary',!inSession());
   renderHeat();
   if(!queue.length) renderFlashIdle(due,nw);
 }
@@ -519,15 +524,17 @@ function renderFlashIdle(due,nw){
     `<div class="emptyq"><b>Готова тренироваться?</b>${status} ${nw?`Новых вопросов: ${nw}.`:''}<br><br>Жми «Начать сессию» справа. Отвечай вслух или на бумаге <i>до</i> того, как раскроешь ответ — так тренируется воспроизведение, а не узнавание.</div>`;
 }
 
-document.getElementById('btnStudy').onclick=()=>{
+function startSession(){
   const p=pool();
   let due=p.filter(isDue), nw=p.filter(isNew);
   queue=shuffle(due).concat(shuffle(nw)).slice(0,40);
   if(!queue.length) queue=shuffle(p.slice()).slice(0,20); // всё освоено — повтори по кругу
-  qPos=0; showCard();
-};
+  qPos=0; cardHist=[]; showCard(); renderCardsSide();
+}
+function endSession(){queue=[];qPos=0;cardHist=[];renderCardsSide();}
+document.getElementById('btnStudy').onclick=()=>{inSession()?endSession():startSession();};
 document.getElementById('btnResetSR').onclick=()=>{
-  if(confirm('Сбросить весь прогресс карточек?')){localStorage.removeItem(SR);queue=[];renderCardsSide();}
+  if(confirm('Сбросить весь прогресс карточек?')){localStorage.removeItem(SR);queue=[];cardHist=[];renderCardsSide();}
 };
 
 function showCard(){
@@ -545,7 +552,8 @@ function showCard(){
     <div class="spacer"></div>
     <div class="actions" id="actions">
       <button class="primary w100" id="btnReveal">Показать ответ</button>
-    </div>`;
+    </div>
+    ${(cardHist.length&&qPos>0)?`<button class="linkbtn" onclick="cardBack()" title="Вернуться и переоценить (клавиша ←)">← предыдущая карточка</button>`:''}`;
   document.getElementById('btnReveal').onclick=reveal;
 }
 function reveal(){
@@ -571,9 +579,24 @@ function srApply(i,g){ // SM-2-обновление одной карточки;
   s[k]=c; srSave(s); bumpGrades();
 }
 function grade(g){
-  const i=queue[qPos]; srApply(i,g);
+  const i=queue[qPos];
+  const s=srStore(), k=srKey(i);
+  cardHist.push({i,g,prev:s[k]?{...s[k]}:null}); // снимок до оценки — для отката
+  srApply(i,g);
   if(g===0) queue.push(i); // показать снова в конце сессии
   qPos++; showCard(); renderCardsSide();
+}
+/* возврат к предыдущей карточке: откатываем SR-состояние, счётчик повторов
+   и добавленный в конец повтор (если была оценка «Снова»), даём переоценить */
+function cardBack(){
+  if(!cardHist.length||qPos===0) return;
+  const h=cardHist.pop();
+  const s=srStore(), k=srKey(h.i);
+  if(h.prev) s[k]=h.prev; else delete s[k];
+  srSave(s);
+  localStorage.setItem(BGRADES,Math.max(0,gradesCount()-1));
+  if(h.g===0) queue.pop();
+  qPos--; showCard(); reveal(); renderCardsSide();
 }
 /* клавиатура: пробел — показать ответ, 1–4 — оценка */
 document.addEventListener('keydown',e=>{
@@ -583,6 +606,7 @@ document.addEventListener('keydown',e=>{
   if(!queue.length||qPos>=queue.length)return;
   if(!revealed&&e.key===' '){e.preventDefault();reveal();}
   else if(revealed&&e.key>='1'&&e.key<='4'){e.preventDefault();grade(+e.key-1);}
+  else if(e.key==='ArrowLeft'){e.preventDefault();cardBack();}
 });
 
 /* ==================== КУРС ==================== */
@@ -700,7 +724,7 @@ function openRef(id,opts){
   renderReader('Справка',r.title,mdToHtml(r.md),navButtons('ref:'+id));
   renderToc();
 }
-function studySection(n){secSel=String(n);goTab('cards');document.getElementById('secFilter').value=secSel;renderCardsSide();document.getElementById('btnStudy').click();}
+function studySection(n){secSel=String(n);goTab('cards');document.getElementById('secFilter').value=secSel;renderCardsSide();startSession();}
 // ошибки в тесте раздела возвращают его изученные карточки в очередь повторов
 function bumpSectionCards(sec){
   const s=srStore(); let total=0; const now=Date.now();
@@ -890,26 +914,22 @@ function renderCabinet(box){
   const nx=courseOrder().find(x=>x.type==='sec'&&!secPassed(x.key));
   const sd=streakDays();
   const stats=`<div class="cabstats">
-      <span><b>${fmtTime(_timeAcc)}</b> в тренажёре</span>
-      <span><b>${sd}</b> ${pluralDay(sd)}</span>
-      <span><b>${st.passed}/${st.totalSec}</b> тестов</span>
-      <span><b>${gradesCount()}</b> повторов карточек</span>
+      <span><b>${fmtTime(_timeAcc)}</b>в тренажёре</span>
+      <span><b>${sd}</b>${pluralDay(sd)}</span>
+      <span><b>${st.passed} / ${st.totalSec}</b>тестов сдано</span>
+      <span><b>${gradesCount()}</b>повторов карточек</span>
     </div>`;
-  const courseDone=st.passed>=st.totalSec;
   const cols=[
-    {ic:'book',t:'Курс',frac:st.courseKnow,num:`<b>${st.passed}</b> из ${st.totalSec} разделов пройдено`,
-     btn:courseDone?'Перечитать курс →':(nx?`К разделу ${nx.key} →`:'Продолжить курс →'),act:'continueCourse()'},
-    {ic:'blocks',t:'Схема',frac:st.buildFrac,num:`<b>${st.lvlsDone}</b> из ${LEVELS.length} уровней собрано`,
-     btn:'Тренировать сборку →',act:"goTab('build')"},
+    {ic:'book',t:'Курс',frac:st.courseKnow,num:`<b>${st.passed}</b> из ${st.totalSec} разделов пройдено`,act:'continueCourse()'},
+    {ic:'blocks',t:'Схема',frac:st.buildFrac,num:`<b>${st.lvlsDone}</b> из ${LEVELS.length} уровней собрано`,act:"goTab('build')"},
     {ic:'cards',t:'Карточки',frac:st.cardsFrac,
      num:st.dueNow?`<b>${st.dueNow}</b> к повтору · ${st.seen}/${Q.length} изучено`:`<b>${st.seen}</b> из ${Q.length} изучено`,
-     btn:st.dueNow?`Повторить ${st.dueNow} →`:'Учить карточки →',act:'startCards()'},
+     act:'startCards()'},
   ].map(p=>`
-    <div class="ccol">
-      <h3>${icon(p.ic,18)} ${p.t}</h3>
+    <div class="ccol" onclick="${p.act}" title="Открыть">
+      <h3>${icon(p.ic,18)} ${p.t} <span class="go">${icon('arrow',15)}</span></h3>
       <div class="num">${p.num}</div>
       <div class="bar"><i style="width:${Math.round(p.frac*100)}%"></i></div>
-      <button onclick="${p.act}">${p.btn}</button>
     </div>`).join('');
   box.innerHTML=`
     <div class="cabhero">
@@ -918,20 +938,19 @@ function renderCabinet(box){
         <span class="lvlbadge">Уровень: ${label}</span>
         <h2>С возвращением!</h2>
         <p>${sub}</p>
-        ${stats}
-        <div class="ctas">
-          ${nx?`<button class="primary" onclick="goTab('course');openSection('${nx.key}')">Продолжить курс · раздел ${nx.key}</button>`:`<button class="primary" onclick="goTab('course')">Перечитать курс</button>`}
-          <button class="ghosty" onclick="goTab('interview')">${icon('mic',14)} Прогон интервью</button>
-        </div>
+      </div>
+      <div class="heroctas">
+        ${nx?`<button class="primary" onclick="goTab('course');openSection('${nx.key}')">Продолжить курс · раздел ${nx.key}</button>`:`<button class="primary" onclick="goTab('course')">Перечитать курс</button>`}
+        <button class="ghosty" onclick="goTab('interview')">${icon('mic',14)} Прогон интервью</button>
       </div>
     </div>
+    ${stats}
     <div class="cabcols">${cols}</div>
     <div class="cabdata">
       <div class="row">
         <button class="pillbtn" onclick="exportProgress()">${icon('download',14)} Экспорт</button>
         <button class="pillbtn" onclick="document.getElementById('importFile').click()">${icon('upload',14)} Импорт</button>
       </div>
-      <div class="cap">Прогресс хранится в этом браузере. Экспорт скачивает копию файлом — забирай её при переезде на другое устройство и восстанавливай через импорт.</div>
       <button class="resetlink" onclick="resetAll()">Сбросить весь прогресс…</button>
     </div>`;
 }
@@ -941,7 +960,7 @@ function continueCourse(){
   const nx=courseOrder().find(x=>x.type==='sec'&&!secPassed(x.key))||courseOrder()[0];
   openDoc(nx.type,nx.key);
 }
-function startCards(){goTab('cards');document.getElementById('btnStudy').click();}
+function startCards(){goTab('cards');startSession();}
 /* ---- экспорт / импорт / сброс прогресса ---- */
 const PROGRESS_KEYS=[READ,SR,SR_V1,BSTORE,TST,BLVL,BTIME,BDAYS,BGRADES,'msg_est_v1','msg_apidb_v1'];
 function exportProgress(){

@@ -43,7 +43,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script>/* тема применяется до загрузки стилей, чтобы не мигало белым */
 (function(){var t=localStorage.getItem('msg_theme')||(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t;})();</script>
-<link rel="stylesheet" href="style.css?v=20260613b">
+<link rel="stylesheet" href="style.css?v=20260613c">
 </head>
 <body>
 <div class="wrap">
@@ -88,7 +88,7 @@
   <!-- ============ BUILD ============ -->
   <section class="pview" id="view-build">
     <header class="dhead">
-      <div class="dtext"><div class="lab">Практика · Схема</div><h2>Собери схему по памяти</h2><p id="lvlDesc"></p></div>
+      <div class="dtext"><h2>Собери схему по памяти</h2><p id="lvlDesc"></p></div>
       <div class="tools">
         <div class="lvlpick">
           <button class="ghost arrow" id="lvlPrev" title="Предыдущий уровень">‹</button>
@@ -132,7 +132,7 @@
   <section class="pview" id="view-cards">
     <div class="drill">
     <header class="dhead">
-      <div class="dtext"><div class="lab">Практика · Карточки</div><h2>Карточки с интервальными повторами</h2><p>Отвечай вслух до раскрытия ответа — тренируется воспроизведение, а не узнавание.</p></div>
+      <div class="dtext"><h2>Карточки с интервальными повторами</h2><p>Отвечай вслух до раскрытия ответа — тренируется воспроизведение, а не узнавание.</p></div>
       <div class="tools"><select class="selsec" id="secFilter"></select></div>
     </header>
     <div class="cardgrid">
@@ -164,7 +164,7 @@
   <section class="pview" id="view-apidb">
     <div class="drill">
       <header class="dhead">
-        <div class="dtext"><div class="lab">Практика · Контракты</div><h2>API и модель данных</h2><p>Собери запрос из кусочков и восстанови таблицы по памяти — то, что спрашивают после «какие таблицы заведёшь?».</p></div>
+        <div class="dtext"><h2>API и модель данных</h2><p>Собери запрос из кусочков и восстанови таблицы по памяти — то, что спрашивают после «какие таблицы заведёшь?».</p></div>
         <div class="tools">
           <div class="adpills">
             <button class="adpill on" id="adModeApi"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H7.5A2.5 2.5 0 0 0 5 5.5V9a2 2 0 0 1-2 2 2 2 0 0 1 2 2v3.5A2.5 2.5 0 0 0 7.5 19H8"/><path d="M16 3h.5A2.5 2.5 0 0 1 19 5.5V9a2 2 0 0 0 2 2 2 2 0 0 0-2 2v3.5a2.5 2.5 0 0 1-2.5 2.5H16"/></svg> API-ручки</button>
@@ -179,7 +179,7 @@
   <!-- ============ ESTIMATE (back-of-envelope) ============ -->
   <section class="pview" id="view-estimate">
     <div class="drill">
-      <header class="dhead"><div class="dtext"><div class="lab">Практика · Прикидки</div><h2>Прикидки · back-of-envelope</h2><p>Случайные задачи на нагрузку, хранение и трафик — считаются в уме, без калькулятора.</p></div></header>
+      <header class="dhead"><div class="dtext"><h2>Прикидки · back-of-envelope</h2><p>Случайные задачи на нагрузку, хранение и трафик — считаются в уме, без калькулятора.</p></div></header>
       <div class="panel"><div id="estBox"></div></div>
     </div>
   </section>
@@ -187,7 +187,7 @@
   <!-- ============ INTERVIEW RUN ============ -->
   <section class="pview" id="view-interview">
     <div class="drill">
-      <header class="dhead"><div class="dtext"><div class="lab">Практика · Прогон</div><h2>Прогон интервью</h2><p>Репетиция целиком и на время — как с живым интервьюером.</p></div></header>
+      <header class="dhead"><div class="dtext"><h2>Прогон интервью</h2><p>Репетиция целиком и на время — как с живым интервьюером.</p></div></header>
       <div id="ivBox"></div>
     </div>
   </section>
@@ -250,6 +250,6 @@
 <script src="tests.js?v=20260611g"></script>
 <script src="mapdata.js?v=20260611g"></script>
 <script src="apidb.js?v=20260611g"></script>
-<script src="app.js?v=20260613b"></script>
+<script src="app.js?v=20260613c"></script>
 </body>
 </html>
