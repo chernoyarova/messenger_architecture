@@ -28,6 +28,7 @@ function goTab(name,opts){
   if(name==='course'){renderToc();if(!curDoc)openIntro({noHash:true});}
   if(name==='estimate') renderEstimate();
   if(name==='interview') renderInterview();
+  if(name==='apidb') renderApiDb();
   if(!(opts&&opts.noHash)) setHash(name==='course'?hashForDoc(curDoc):'#'+name);
   window.scrollTo(0,0);
 }
@@ -42,7 +43,7 @@ function applyHash(){
     if(parts[1]==='ref'&&parts[2]) openRef(parts[2],{noHash:true});
     else if(parts[1]) openSection(parts[1],{noHash:true});
     else openIntro({noHash:true}); // голый #course — вводная «что тебя ждёт»
-  } else if(['home','build','cards','map','estimate','interview'].includes(tab)) goTab(tab,{noHash:true});
+  } else if(['home','build','cards','map','estimate','interview','apidb'].includes(tab)) goTab(tab,{noHash:true});
   else goTab('home',{noHash:true});
 }
 window.addEventListener('hashchange',()=>{ if(location.hash!==lastAppliedHash) applyHash(); });
@@ -806,7 +807,7 @@ function renderDashboard(){
 function continueCourse(){const nx=courseOrder().find(x=>x.type==='sec'&&!secPassed(x.key))||courseOrder()[0];goTab('course');openDoc(nx.type,nx.key);}
 function startCards(){goTab('cards');document.getElementById('btnStudy').click();}
 /* ---- экспорт / импорт / сброс прогресса ---- */
-const PROGRESS_KEYS=[READ,SR,SR_V1,BSTORE,TST,BLVL,BTIME,BDAYS,BGRADES,'msg_est_v1'];
+const PROGRESS_KEYS=[READ,SR,SR_V1,BSTORE,TST,BLVL,BTIME,BDAYS,BGRADES,'msg_est_v1','msg_apidb_v1'];
 function exportProgress(){
   const data={_app:'messenger-trainer',_exported:new Date().toISOString()};
   PROGRESS_KEYS.forEach(k=>{const v=localStorage.getItem(k);if(v!=null)data[k]=v;});
@@ -902,6 +903,212 @@ function checkEstimate(){
   const st=estStats();st.n++;if(r.ok)st.ok++;localStorage.setItem(EST,JSON.stringify(st));
   document.getElementById('estOut').innerHTML=r.html;
   document.getElementById('estActs').innerHTML=`<button class="primary" onclick="newEstimate()">Дальше → <small>(Enter)</small></button>`;
+}
+
+/* ==================== ТРЕНАЖЁР «КОНТРАКТЫ»: API + МОДЕЛЬ ДАННЫХ ==================== */
+const AD=window.APIDB||{API_TASKS:[],TABLES:[]};
+const ADS='msg_apidb_v1';
+function adStore(){try{return JSON.parse(localStorage.getItem(ADS))||{api:{n:0,ok:0},tables:{}}}catch(e){return{api:{n:0,ok:0},tables:{}}}}
+function adSave(s){localStorage.setItem(ADS,JSON.stringify(s));}
+let adMode='api';
+let apiPool=[],apiCur=null,apiMethod=null,apiChecked=false;
+let dbTable=null,dbColsLeft=[],dbPhase=null,dbMiss=0,dbKeyIdx=0,dbKeyPicked=null;
+
+function renderApiDb(){
+  const box=document.getElementById('adBox');if(!box)return;
+  document.getElementById('adModeApi').classList.toggle('on',adMode==='api');
+  document.getElementById('adModeDb').classList.toggle('on',adMode==='db');
+  if(adMode==='api')renderApiDrill(box);else renderDbDrill(box);
+}
+document.getElementById('adModeApi').onclick=()=>{adMode='api';renderApiDb();};
+document.getElementById('adModeDb').onclick=()=>{adMode='db';renderApiDb();};
+
+/* ---- дрилл 1: API-конструктор ---- */
+const AD_METHODS=['GET','POST','PUT','DELETE','WS'];
+function apiNext(){
+  if(!apiPool.length)apiPool=shuffle(AD.API_TASKS.map((t,i)=>i)); // цикл без повторов, пока пул не кончится
+  apiCur=AD.API_TASKS[apiPool.pop()];apiMethod=null;apiChecked=false;
+  renderApiDb();
+}
+function renderApiDrill(box){
+  if(!apiCur){apiNext();return;}
+  const st=adStore().api;
+  box.innerHTML=`
+    <div class="lab">API-конструктор · как клиент это запросит?</div>
+    <div class="estq">${apiCur.task}</div>
+    <div class="mrow">${AD_METHODS.map(m=>`<button class="mbtn${apiMethod===m?' on':''}" data-m="${m}">${m}</button>`).join('')}</div>
+    <div class="estrow"><input id="apiPath" type="text" autocomplete="off" spellcheck="false" placeholder="${apiMethod==='WS'?'имя события — например message.new':'путь — например /messages/{chat_id}'}">
+      <button class="primary" id="apiCheckBtn">Проверить</button></div>
+    <div id="apiOut"></div>
+    <div class="note" style="margin-top:14px;">Серия: верно ${st.ok} из ${st.n} · правило: «запросил один раз → HTTP; прилетает само → WS»</div>`;
+  box.querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{
+    if(apiChecked)return;
+    apiMethod=b.dataset.m;
+    box.querySelectorAll('.mbtn').forEach(x=>x.classList.toggle('on',x.dataset.m===apiMethod));
+    const inp=document.getElementById('apiPath');
+    inp.placeholder=apiMethod==='WS'?'имя события — например message.new':'путь — например /messages/{chat_id}';
+    inp.focus();
+  });
+  document.getElementById('apiCheckBtn').onclick=apiCheck;
+  const inp=document.getElementById('apiPath');
+  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();apiChecked?apiNext():apiCheck();}};
+}
+function normPathSegs(p){
+  p=String(p).trim().toLowerCase().split('?')[0].replace(/\/+$/,'');
+  p=p.replace(/^https?:\/\/[^/]*/,'');
+  if(!p.startsWith('/'))p='/'+p;
+  p=p.replace(/^\/v\d+/,''); // версия в пути — гигиена, но не предмет проверки
+  return p.split('/').filter(Boolean).map(s=>{
+    if(/^[{<:\[$]/.test(s)||/[}>\]]$/.test(s))return '*'; // плейсхолдер в любом синтаксисе
+    return s.replace(/s$/,''); // messages ≈ message
+  });
+}
+function matchPath(input,canon){
+  const a=normPathSegs(input),b=normPathSegs(canon);
+  if(a.length!==b.length)return false;
+  return b.every((seg,i)=>seg==='*'||a[i]==='*'||seg===a[i]);
+}
+function normEvent(s){return String(s).toLowerCase().replace(/[^a-zа-я0-9]/g,'');}
+function matchEvent(input,t){
+  const v=normEvent(input);
+  return v===normEvent(t.event)||(t.evAlias||[]).includes(v);
+}
+function apiCheck(){
+  if(apiChecked||!apiCur)return;
+  const t=apiCur, inp=document.getElementById('apiPath'), v=(inp.value||'').trim();
+  if(!apiMethod){showToast('Сначала выбери метод');return;}
+  if(!v){inp.classList.add('bad');setTimeout(()=>inp.classList.remove('bad'),400);return;}
+  const okMethod=(apiMethod===t.method)||(t.methodAlt||[]).includes(apiMethod);
+  let okPath;
+  if(t.method==='WS') okPath=(apiMethod==='WS')&&matchEvent(v,t);
+  else okPath=matchPath(v,t.path)||(t.evAccept||[]).includes(normEvent(v));
+  const ok=okMethod&&okPath;
+  apiChecked=true;
+  const s=adStore();s.api.n++;if(ok)s.api.ok++;adSave(s);
+  if(ok&&s.api.ok%15===0)celebrate();
+  const canon=t.method==='WS'
+    ?`WS-событие <b>${t.event}</b>`
+    :`<b>${t.method} ${t.path}${t.query||''}</b>${t.methodAlt?` <span style="color:var(--muted2);font-weight:400;">(или ${t.methodAlt.join(' / ')})</span>`:''}`;
+  document.getElementById('apiOut').innerHTML=`
+    <div class="qsummary ${ok?'ok':'bad'}" style="margin-top:14px;text-align:left;">
+      <div class="big" style="font-size:20px;">${ok?'✓ Верно':'✗ Не то'}</div>
+      <div class="adcanon">${canon}</div>
+      <div class="adfacts">
+        ${okMethod?'':`<div>✗ Метод: ты выбрала <b>${apiMethod}</b>, нужен <b>${t.method}</b></div>`}
+        ${okPath?'':`<div>✗ ${t.method==='WS'?'Событие':'Путь'}: ты написала «${v}»</div>`}
+        ${t.note?`<div>💡 ${t.note}</div>`:''}
+        ${t.event&&t.method!=='WS'?`<div>📡 Ручка тянет событие: по WS уходит <b>${t.event}</b></div>`:''}
+        ${t.tables?`<div>🗄 Трогает таблицы: <b>${t.tables.join(', ')}</b></div>`:''}
+      </div>
+      <div class="acts" style="justify-content:flex-start;margin-top:12px;"><button class="primary" onclick="apiNext()">Дальше → <small>(Enter)</small></button></div>
+    </div>`;
+}
+
+/* ---- дрилл 2: модель данных ---- */
+function curTable(){return AD.TABLES.find(t=>t.name===dbTable);}
+function dbStart(name){
+  dbTable=name;dbMiss=0;dbKeyIdx=0;dbKeyPicked=null;dbPhase='cols';
+  dbColsLeft=shuffle(curTable().cols.map(c=>c.c));
+  renderApiDb();
+}
+function renderDbDrill(box){
+  const st=adStore().tables;
+  const chips=AD.TABLES.map(t=>{
+    const done=st[t.name]&&st[t.name].complete;
+    return `<button class="tchip${dbTable===t.name?' on':''}${done?' done':''}" data-t="${t.name}">${done?'✓ ':''}${t.name}</button>`;
+  }).join('');
+  box.innerHTML=`<div class="lab">Модель данных · собери таблицу по памяти</div>
+    <div class="tchips">${chips}</div>${dbTable?dbBody():
+    `<p class="note" style="font-size:13.5px;line-height:1.6;">Выбери таблицу и восстанови её: сначала <b>столбцы по памяти</b>, потом <b>ключевые решения</b> — шардирование, первичный ключ, что лежит ссылкой. Ровно то, что спрашивают после «какие таблицы заведёшь?».</p>`}`;
+  box.querySelectorAll('.tchip').forEach(b=>b.onclick=()=>dbStart(b.dataset.t));
+  dbBind(box);
+}
+function dbBody(){
+  const t=curTable();
+  if(dbPhase==='cols'){
+    const got=t.cols.length-dbColsLeft.length;
+    return `<div class="estq" style="font-size:16px;">${t.name} — ${t.title.toLowerCase()}. Назови столбцы (${got} / ${t.cols.length}):</div>
+      <div class="estrow"><input id="dbColIn" autocomplete="off" spellcheck="false" placeholder="имя столбца — Enter после каждого">
+        <button class="ghost" id="dbGiveup">Показать (+${dbColsLeft.length})</button></div>
+      <div style="margin-top:10px;">${t.cols.filter(c=>!dbColsLeft.includes(c.c)).map(c=>`<span class="rchip">${c.c}</span>`).join('')}</div>
+      <div class="note" style="margin-top:10px;">Ошибок: <span id="dbMissN">${dbMiss}</span></div>`;
+  }
+  if(dbPhase==='key'){
+    const k=t.keys[dbKeyIdx];
+    const opts=k.opts.map((o,i)=>{
+      let cls='qopt';
+      if(dbKeyPicked!=null){cls+=i===k.correct?' right':(i===dbKeyPicked?' wrong':' faded');}
+      return `<button class="${cls}" data-i="${i}">${o}</button>`;
+    }).join('');
+    return `<div class="estq" style="font-size:16px;">${t.name}: ${k.q}</div>
+      <div class="qopts" style="margin-top:8px;">${opts}</div>
+      ${dbKeyPicked!=null?`<div class="qexp show" style="margin-top:10px;">${k.why}</div>
+        <div class="acts" style="justify-content:flex-start;margin-top:12px;"><button class="primary" id="dbKeyNext">${dbKeyIdx<t.keys.length-1?'Следующий вопрос →':'Готово →'}</button></div>`:''}`;
+  }
+  const best=adStore().tables[t.name]||{};
+  return `<div class="qsummary ok" style="text-align:left;margin-top:4px;">
+    <div class="big" style="font-size:20px;">✓ ${t.name} собрана · ошибок ${dbMiss}${best.miss!=null&&best.miss<dbMiss?` (лучший: ${best.miss})`:''}</div>
+    <div class="adcanon">${t.schema}</div>
+    <div class="adfacts">${t.keys.map(k=>`<div>💡 ${k.why}</div>`).join('')}</div>
+    <div class="acts" style="justify-content:flex-start;margin-top:12px;">
+      <button class="primary" id="dbNextTable">Следующая таблица →</button>
+      <button class="ghost" id="dbRedo">Эту заново</button></div></div>`;
+}
+function dbBind(box){
+  const inp=document.getElementById('dbColIn');
+  if(inp){
+    inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();dbTryCol(inp);}};
+    inp.focus();
+    document.getElementById('dbGiveup').onclick=()=>{dbMiss+=dbColsLeft.length;dbColsLeft=[];dbPhase='key';renderApiDb();};
+  }
+  if(dbPhase==='key'){
+    box.querySelectorAll('.qopt').forEach(b=>b.onclick=()=>{
+      if(dbKeyPicked!=null)return;
+      dbKeyPicked=+b.dataset.i;
+      if(dbKeyPicked!==curTable().keys[dbKeyIdx].correct)dbMiss++;
+      renderApiDb();
+    });
+    const nx=document.getElementById('dbKeyNext');
+    if(nx)nx.onclick=()=>{
+      if(dbKeyIdx<curTable().keys.length-1){dbKeyIdx++;dbKeyPicked=null;}
+      else dbFinish();
+      renderApiDb();
+    };
+  }
+  const nt=document.getElementById('dbNextTable');
+  if(nt)nt.onclick=()=>{
+    const st=adStore().tables;
+    const next=AD.TABLES.find(x=>!(st[x.name]&&st[x.name].complete)&&x.name!==dbTable)||AD.TABLES[0];
+    dbStart(next.name);
+  };
+  const rd=document.getElementById('dbRedo');
+  if(rd)rd.onclick=()=>dbStart(dbTable);
+}
+function dbTryCol(inp){
+  const v=normName(inp.value);if(v.length<2)return;
+  const t=curTable();
+  const hit=dbColsLeft.find(cn=>{
+    const col=t.cols.find(c=>c.c===cn);
+    const names=[normName(col.c),...(col.a||[]).map(normName)];
+    return names.includes(v)||names.includes(v+'id')||names.includes(v.replace(/id$/,''))||normName(col.c).replace(/id$/,'')===v;
+  });
+  if(hit){
+    dbColsLeft=dbColsLeft.filter(x=>x!==hit);
+    if(!dbColsLeft.length)dbPhase='key';
+    renderApiDb();
+  } else {
+    dbMiss++;
+    const n=document.getElementById('dbMissN');if(n)n.textContent=dbMiss;
+    inp.classList.add('bad');setTimeout(()=>inp.classList.remove('bad'),400);
+    inp.select();
+  }
+}
+function dbFinish(){
+  dbPhase='done';
+  const s=adStore();const prev=s.tables[dbTable]||{};
+  s.tables[dbTable]={complete:true,miss:Math.min(dbMiss,prev.miss==null?dbMiss:prev.miss)};
+  adSave(s);
+  if(dbMiss===0)celebrate();
 }
 
 /* ==================== ПРОГОН ИНТЕРВЬЮ ==================== */

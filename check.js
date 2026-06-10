@@ -5,7 +5,7 @@
 const fs = require('fs'), path = require('path');
 
 const window = {};
-for (const f of ['questions.js', 'course.js', 'tests.js', 'mapdata.js'])
+for (const f of ['questions.js', 'course.js', 'tests.js', 'mapdata.js', 'apidb.js'])
   eval(fs.readFileSync(path.join(__dirname, 'Public', f), 'utf8'));
 
 const COURSE = window.COURSE, TESTS = window.TESTS, Q = window.QUESTIONS, MD = window.MAPDATA;
@@ -85,10 +85,36 @@ const usedInLevels = new Set();
 });
 nodeIds.forEach(n => { if (!usedInLevels.has(n)) warn(`Узел ${n} не входит ни в один уровень игры`); });
 
+/* ---- 6. Тренажёр «Контракты» (API + БД) ---- */
+const AD = window.APIDB || { API_TASKS: [], TABLES: [] };
+const tblNames = new Set(AD.TABLES.map(t => t.name));
+const apiIds = new Set();
+AD.API_TASKS.forEach(t => {
+  if (apiIds.has(t.id)) err(`API: дубликат id ${t.id}`);
+  apiIds.add(t.id);
+  if (!t.task) err(`API ${t.id}: пустой текст задачи`);
+  if (!['GET', 'POST', 'PUT', 'DELETE', 'WS'].includes(t.method)) err(`API ${t.id}: неизвестный метод ${t.method}`);
+  if (t.method === 'WS') { if (!t.event) err(`API ${t.id}: WS-задача без event`); }
+  else if (!t.path || !t.path.startsWith('/')) err(`API ${t.id}: путь должен начинаться с / (${t.path})`);
+  (t.tables || []).forEach(n => { if (!tblNames.has(n)) err(`API ${t.id}: ссылка на несуществующую таблицу ${n}`); });
+});
+AD.TABLES.forEach(t => {
+  if (!t.schema) err(`БД ${t.name}: нет строки schema`);
+  if (!t.cols || t.cols.length < 3) err(`БД ${t.name}: меньше 3 столбцов`);
+  const cn = new Set();
+  (t.cols || []).forEach(c => { if (cn.has(c.c)) err(`БД ${t.name}: дубликат столбца ${c.c}`); cn.add(c.c); });
+  if (!t.keys || !t.keys.length) err(`БД ${t.name}: нет ключевых вопросов`);
+  (t.keys || []).forEach((k, i) => {
+    if (!Number.isInteger(k.correct) || k.correct < 0 || k.correct >= (k.opts || []).length)
+      err(`БД ${t.name}, вопрос ${i + 1}: correct вне диапазона`);
+    if (!k.why) warn(`БД ${t.name}, вопрос ${i + 1}: нет пояснения why`);
+  });
+});
+
 /* ---- итог ---- */
 const secCount = Object.keys(COURSE.sections).length;
 const testCount = Object.values(TESTS).reduce((a, t) => a + t.length, 0);
-console.log(`Данные: ${secCount} разделов · ${testCount} тестовых вопросов · ${Q.length} карточек · ${nodeIds.size} узлов · ${MD.LINKS.length} связей · ${MD.SCENARIOS.length} сценариев · ${(MD.LEVELS || []).length} уровней`);
+console.log(`Данные: ${secCount} разделов · ${testCount} тестовых вопросов · ${Q.length} карточек · ${nodeIds.size} узлов · ${MD.LINKS.length} связей · ${MD.SCENARIOS.length} сценариев · ${(MD.LEVELS || []).length} уровней · ${AD.API_TASKS.length} API-задач · ${AD.TABLES.length} таблиц`);
 warns.forEach(w => console.log('⚠  ' + w));
 if (errors.length) {
   errors.forEach(e => console.error('✗  ' + e));
