@@ -916,6 +916,10 @@ let dbTable=null,dbColsLeft=[],dbPhase=null,dbMiss=0,dbKeyIdx=0,dbKeyPicked=null
 
 function renderApiDb(){
   const box=document.getElementById('adBox');if(!box)return;
+  if(!AD.API_TASKS.length||!AD.TABLES.length){ // apidb.js не загрузился (старый кэш) — не молчим
+    box.innerHTML='<div class="emptyq"><b>Данные тренажёра не загрузились</b>Похоже, в кэше старая версия. Обнови страницу с очисткой кэша: <b>Cmd+Shift+R</b> (Mac) или <b>Ctrl+Shift+R</b>.</div>';
+    return;
+  }
   document.getElementById('adModeApi').classList.toggle('on',adMode==='api');
   document.getElementById('adModeDb').classList.toggle('on',adMode==='db');
   if(adMode==='api')renderApiDrill(box);else renderDbDrill(box);
