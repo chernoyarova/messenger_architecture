@@ -830,25 +830,27 @@ function renderLanding(box){
   ];
   const dbl='<svg width="13" height="9" viewBox="0 0 16 10" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5.5 4 8.5 10 1.5"/><path d="M7.5 7.5 8.5 8.5 15 1.5"/></svg>';
   const msgs=seq.map((m,i)=>`<div class="ph-msg ${m.dir}" style="animation-delay:${(.35+i*.6).toFixed(2)}s">${m.t}<span class="mt">${m.tm}${m.dir==='out'?dbl:''}</span></div>`).join('');
+  const tIn=.35+seq.length*.6+.5, tOut=tIn+2.1; // тайпинг живёт ~2 с, потом интервьюер «дописывает»
   box.innerHTML=`
   <div class="landing">
     <div>
-      <span class="kicker">Бесплатно · без регистрации · открытый код</span>
+      <div class="kickrow"><span>Бесплатно</span><span>Без регистрации</span><span>Открытый код</span></div>
       <h2>Спроектируй мессенджер.<br>Пройди интервью <b>уверенно</b>.</h2>
       <p class="sub">Курс по архитектуре мессенджера и пять тренажёров, которые учат не узнавать, а воспроизводить: схему — рукой, контракты — по памяти, ответы — вслух. Открой и занимайся: никаких аккаунтов, прогресс хранится в твоём браузере.</p>
       <div class="ctas">
         <button class="primary" onclick="continueCourse()">Начать курс</button>
         <button class="ghosty" onclick="goTab('map')">Посмотреть карту</button>
       </div>
-      <div class="factrow"><span><b>${Object.keys(COURSE.sections).length}</b> разделов</span><span><b>${tests}</b> тестов</span><span><b>${Q.length}</b> карточек</span><span><b>${AD.API_TASKS.length}</b> API-задач</span><span><b>${window.MAPDATA.SCENARIOS.length}</b> сценариев</span></div>
+      <div class="factrow"><span><b>${Object.keys(COURSE.sections).length}</b> разделов</span><span><b>${tests}</b> тестов</span><span><b>${window.MAPDATA.SCENARIOS.length}</b> сценариев на карте</span></div>
     </div>
     <div class="phone">
       <div class="blob" style="top:-50px;left:-70px;width:260px;height:260px;background:radial-gradient(circle,rgba(106,164,224,.14),transparent 70%);"></div>
       <div class="ph-head"><span class="ph-ava"><i>SD</i></span><div><div class="nm">Интервьюер</div><div class="st">online</div></div></div>
       <div class="ph-msgs">${msgs}
-        <div class="ph-typing" style="animation-delay:${(.35+seq.length*.6+.5).toFixed(2)}s"><i></i><i></i><i></i></div>
+        <div class="ph-typing" style="animation:msgIn .5s forwards ${tIn.toFixed(2)}s, typOut .4s forwards ${tOut.toFixed(2)}s"><i></i><i></i><i></i></div>
+        <div class="ph-msg in" style="animation-delay:${(tOut+.3).toFixed(2)}s">Сильно. Следующий вопрос — шардирование 😉<span class="mt">14:07</span></div>
       </div>
-      <div class="ph-input"><div class="fld">Сообщение…</div></div>
+      <div class="ph-input"><button class="fld" onclick="goTab('interview')">Твоя очередь отвечать…</button><button class="ph-send" title="Прогон интервью" onclick="goTab('interview')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-11 11"/><path d="M22 2 15 22l-4-9-9-4Z"/></svg></button></div>
     </div>
   </div>
   <div class="blocks3">
@@ -868,6 +870,12 @@ function renderLanding(box){
       <button onclick="goTab('map')">Открыть карту →</button>
     </div>
   </div>
+  <div class="landcta">
+    <h3>Первый раздел — минут десять</h3>
+    <p>Без регистрации и установки. Прогресс сохраняется в твоём браузере.</p>
+    <button class="primary" onclick="continueCourse()">Начать курс</button>
+  </div>
+  <div class="landsign">Курс и тренажёры делаю я — <a href="https://t.me/monrech" target="_blank" rel="noopener">@monrech</a>, готовясь к своим system design собеседованиям. Замечания и идеи — пиши.</div>
   `;
 }
 function renderCabinet(box){
