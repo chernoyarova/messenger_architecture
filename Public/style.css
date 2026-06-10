@@ -83,10 +83,12 @@ html[data-theme="dark"] body::before{background:linear-gradient(165deg,#0C111D 0
 html[data-theme="dark"] body::after{background:
   radial-gradient(420px 420px at -4% -6%, rgba(90,156,224,.10), transparent 70%),
   radial-gradient(480px 480px at 104% 36%, rgba(127,185,236,.07), transparent 70%);}
-/* один контейнер для всего: хедер и контент любой вкладки совпадают по обоим краям */
-.wrap{max-width:1100px;margin:0 auto;padding:0 16px 60px;}
+/* один контейнер для всего: хедер и контент любой вкладки совпадают по обоим краям.
+   Флекс-колонка на всю высоту окна — футер не липнет к короткому контенту,
+   а прижимается к низу экрана (margin-top:auto у .appfoot) */
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px 36px;display:flex;flex-direction:column;min-height:100vh;}
 .view{display:none;}
-.view.on{display:block;}
+.view.on{display:block;margin-bottom:48px;}
 .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
 
 /* ====== ХЕДЕР ====== */
@@ -97,7 +99,9 @@ header.top .iconbtn{justify-self:end;background:var(--glass);border:1px solid va
 @media(max-width:760px){header.top{grid-template-columns:auto 1fr auto;}header.top .tabs{justify-self:center;}}
 .brand{display:flex;align-items:center;gap:9px;cursor:pointer;}
 .brand .logo{width:30px;height:30px;border-radius:10px;background:var(--accgrad);display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 6px 14px rgba(90,156,224,.35);flex:none;}
-.brand h1{font-size:16px;font-weight:700;letter-spacing:-.01em;margin:0;white-space:nowrap;}
+/* вордмарка — двухтоновая пара: жирная «Архитектура» + лёгкое акцентное «мессенджера» */
+.brand h1{font-size:16.5px;font-weight:800;letter-spacing:-.01em;margin:0;white-space:nowrap;color:var(--ink);}
+.brand h1 em{font-style:normal;font-weight:500;color:var(--edge);}
 @media(max-width:560px){.brand h1{display:none;}}
 .tabs{display:flex;gap:2px;flex-wrap:wrap;padding:5px;border-radius:var(--r-pill);
   background:var(--glass);border:1px solid var(--glassline);box-shadow:var(--shadow);
@@ -124,8 +128,6 @@ button.primary:hover{filter:brightness(1.06);border-color:transparent;color:#fff
 button.ghost{background:transparent;color:var(--muted);}
 /* стеклянная второстепенная кнопка (герой-блоки) */
 .ghosty{display:inline-flex;align-items:center;gap:7px;padding:12px 22px;font-size:14px;background:var(--bg2);border:1px solid var(--glassline);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
-.pillbtn{display:inline-flex;align-items:center;gap:7px;padding:8px 17px;border:1px solid var(--glassline);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
-.pillbtn:hover{border-color:var(--edge);color:var(--edge);}
 /* тёплый акцент — единственный главный CTA экрана (лендинг, кабинет) */
 .landing .ctas .primary,.landcta .primary,.heroctas .primary{padding:13px 26px;font-size:15px;background:var(--warmgrad);box-shadow:var(--warmsh);}
 .iconbtn{display:flex;align-items:center;justify-content:center;border-radius:50%;width:40px;height:40px;padding:0;font-size:15px;line-height:1;background:var(--bg2);}
@@ -155,7 +157,7 @@ a.lnk{color:var(--edge);text-decoration:none;} a.lnk:hover{text-decoration:under
 .my12{margin-top:12px;margin-bottom:12px;}
 
 /* ====== ПАНЕЛИ (стекло) ====== */
-.panel,.toc,.reader,.sidecard,.flash,.mappanel,.scnpick,.palette,.ivpanel,.dragghost{
+.panel,.reader,.sidecard,.flash,.mappanel,.palette,.ivpanel,.dragghost{
   background:var(--glass);border:1px solid var(--glassline);border-radius:var(--r-l);
   backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);
   box-shadow:var(--shadow);}
@@ -206,7 +208,8 @@ html[data-theme="light"] .reader{background:rgba(255,255,255,.92);}
   .board,.mapboard{overflow-x:auto;-webkit-overflow-scrolling:touch;}
   svg.boardsvg,svg#mapSvg{min-width:740px;}
 }
-.board{background-image:linear-gradient(var(--boardgrid) 1px,transparent 1px),linear-gradient(90deg,var(--boardgrid) 1px,transparent 1px);background-size:30px 30px;padding:8px;position:relative;overflow:hidden;}
+.board,.mapboard{background-image:linear-gradient(var(--boardgrid) 1px,transparent 1px),linear-gradient(90deg,var(--boardgrid) 1px,transparent 1px);background-size:30px 30px;}
+.board{padding:8px;position:relative;overflow:hidden;}
 svg.boardsvg{width:100%;height:auto;display:block;touch-action:manipulation;}
 .slot{cursor:pointer;}
 .slot rect.box{fill:var(--slotfill);stroke-dasharray:5 4;stroke-width:1.5;}
@@ -285,7 +288,10 @@ details.legend[open] summary::before{content:'▾ ';}
 /* ====== КУРС ====== */
 .coursegrid{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start;}
 @media(max-width:860px){.coursegrid{grid-template-columns:1fr;}}
-.toc{padding:12px;position:sticky;top:12px;max-height:88vh;overflow:auto;}
+/* оглавление — тихая навигация без коробки: «листом бумаги» остаётся только
+   ридер, и разница высот колонок при прокрутке перестаёт быть заметной */
+.toc{background:transparent;border:none;box-shadow:none;padding:2px 10px 24px 2px;
+  position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;}
 .toc .part{display:block;margin:14px 6px 6px;}
 .toc .part:first-child{margin-top:2px;}
 .toc .ti{display:flex;gap:9px;align-items:flex-start;width:100%;text-align:left;background:var(--bg2);border:1px solid transparent;border-radius:var(--r-m);padding:8px 10px;margin-bottom:5px;cursor:pointer;transition:var(--t-fast);}
@@ -369,35 +375,47 @@ details.legend[open] summary::before{content:'▾ ';}
 .qsummary.compact .acts{justify-content:flex-start;}
 
 /* ====== КАРТА ====== */
-.mapgrid{display:grid;grid-template-columns:1fr var(--sidew);gap:16px;align-items:start;}
-@media(max-width:980px){.mapgrid{grid-template-columns:1fr;}.mapside{position:static;}}
-.mapboard{padding:8px;}
+/* карта на всю ширину контейнера; сценарий и сброс — в .dhead .tools;
+   контекст узла/сценария — полосой под картой; зум кнопками поверх доски */
+.mapboard{padding:8px;position:relative;overflow:hidden;}
 svg#mapSvg{width:100%;height:auto;display:block;}
-.mapside{position:sticky;top:76px;display:flex;flex-direction:column;gap:12px;}
-.scnpick{padding:12px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.scnpick .lab{flex:none;}
-.mappanel{padding:16px 20px;min-height:150px;}
+.mapzoom{position:absolute;bottom:14px;right:14px;display:flex;flex-direction:column;gap:6px;z-index:5;}
+.mapzoom button{width:34px;height:34px;border-radius:50%;padding:0;font-size:17px;line-height:1;background:var(--glass);border:1px solid var(--glassline);box-shadow:0 4px 12px rgba(20,30,55,.14);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
+.mapzoom button:hover{border-color:var(--edge);color:var(--edge);}
+/* плавающий контекст в пустой верхней зоне доски: шаги сценария и пояснение узла */
+.mapover{position:absolute;top:14px;left:14px;right:14px;z-index:4;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.mapover>*{pointer-events:auto;}
+.mapover .capbar{margin:0;font-size:12.5px;padding:10px 14px;background:var(--glass);border:1px solid var(--glassline);border-left:3px solid var(--edge);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);box-shadow:0 8px 22px rgba(20,30,55,.10);}
+.mapover .capbar.rtc{border-left-color:var(--rtc);}
+/* пояснение узла — плавающая карточка рядом с кликнутым блоком (координаты ставит JS);
+   в свободном режиме — короткая подсказка в верхнем левом углу */
+.mappanel{display:none;position:absolute;left:14px;top:14px;z-index:6;margin:0;padding:12px 32px 12px 16px;min-height:0;max-height:300px;overflow:auto;max-width:560px;}
+.mappanel.show{display:block;}
+.mclose{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;padding:0;font-size:15px;line-height:1;color:var(--muted);background:var(--bg2);border:none;flex:none;}
+.mclose:hover{color:var(--bad);border:none;}
+.mappanel .mclose{position:absolute;top:8px;right:8px;}
+.mappanel h3{font-size:15px;margin:4px 0 2px;}
+.mappanel .secref{font-size:11px;margin-bottom:8px;}
+.mappanel .row{margin:8px 0;}
+.mappanel .row span{font-size:12.5px;}
+.mappanel .mhint{margin:0;font-size:12px;line-height:1.55;color:var(--muted);}
 .mappanel h3{margin:7px 0 3px;font-size:18px;font-weight:700;}
 .mappanel .secref{font-size:12px;color:var(--edge);font-weight:600;margin-bottom:12px;}
 .mappanel .row{margin:11px 0;}
 .mappanel .row b{display:block;margin-bottom:3px;}
 .mappanel .row span{font-size:13px;line-height:1.5;color:var(--ink);}
 .mappanel .hint{color:var(--muted);font-size:13px;line-height:1.55;}
-.capbar{margin-top:12px;background:var(--bg2);border:1px solid transparent;border-left:3px solid var(--edge);border-radius:var(--r-m);padding:12px 14px;font-size:13px;line-height:1.5;color:var(--ink);display:none;}
+/* полоса шагов: заголовок и стрелки в одну строку, под ними подпись шага */
+.capbar{border-radius:var(--r-m);font-size:13px;line-height:1.5;color:var(--ink);display:none;}
 .capbar.show{display:block;}
-.capbar.rtc{border-left-color:var(--rtc);}
-.capbar .cstep{display:block;font-family:'Space Mono',monospace;font-size:11px;color:var(--edge);letter-spacing:.5px;margin-bottom:5px;}
+.caphead{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.capbar .cstep{font-family:'Space Mono',monospace;font-size:11px;color:var(--edge);letter-spacing:.5px;}
 .capbar.rtc .cstep{color:var(--rtc);}
-.capnav{display:flex;gap:8px;align-items:center;margin-top:11px;flex-wrap:wrap;}
-.capnav .sn{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted2);min-width:46px;text-align:center;}
-.capnav .kbdhint{font-size:11px;color:var(--muted2);margin-left:auto;}
+.capbar #mcapText{display:block;margin-top:5px;}
+.capnav{display:flex;gap:6px;align-items:center;}
+.capnav .arrow{padding:4px 11px;font-size:14px;line-height:1;}
+.capnav .kbdhint{font-size:11px;color:var(--muted2);margin-right:6px;}
 @media(max-width:560px){.capnav .kbdhint{display:none;}}
-.capdots{display:flex;gap:5px;flex-wrap:wrap;margin-top:12px;}
-.capdots .dot{width:24px;height:6px;border-radius:3px;background:var(--line);cursor:pointer;border:none;padding:0;transition:var(--t-fast);}
-.capdots .dot:hover{background:var(--muted2);}
-.capdots .dot.done{background:var(--ghosttxt);}
-.capdots .dot.on{background:var(--edge);box-shadow:0 0 0 2px rgba(47,107,255,.18);}
-.capbar.rtc .capdots .dot.on{background:var(--rtc);box-shadow:0 0 0 2px rgba(230,57,122,.18);}
 /* узлы и связи карты */
 .node{cursor:pointer;} .node text{pointer-events:none;}
 .node .label{font-weight:700;font-size:13px;fill:var(--ink);}
@@ -434,6 +452,7 @@ svg#mapSvg{width:100%;height:auto;display:block;}
   box-shadow:0 10px 30px rgba(47,107,255,.18);}
 .ring .hole{position:absolute;inset:14px;background:var(--bg);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;}
 .ring .hole b{font-size:48px;font-weight:800;line-height:1;color:var(--ink);}
+.ring .hole b i{font-style:normal;font-size:24px;font-weight:700;color:var(--muted);margin-left:2px;}
 .ring .hole small{font-size:11px;color:var(--muted2);margin-top:4px;letter-spacing:1px;}
 .cabhero .meta{flex:1;min-width:260px;}
 .cabhero .meta .lvlbadge{display:inline-block;font-size:12px;font-weight:700;color:var(--edge);background:var(--accentbg);border:1px solid var(--accentline);border-radius:var(--r-pill);padding:4px 13px;margin-bottom:12px;letter-spacing:.2px;}
@@ -441,26 +460,46 @@ svg#mapSvg{width:100%;height:auto;display:block;}
 .cabhero .meta p{margin:0;color:var(--muted);font-size:15px;line-height:1.55;max-width:46ch;}
 .heroctas{display:flex;flex-direction:column;gap:10px;min-width:260px;}
 .heroctas button{justify-content:center;display:inline-flex;align-items:center;gap:8px;}
+/* тихая сервисная строка под CTA: экспорт / импорт / сброс — текст, не кнопки
+   (та же идиома, что футер) */
+.herodata{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:2px;}
+.herodata i{font-style:normal;color:var(--muted2);font-size:12px;}
+.databtn{display:inline-flex;align-items:center;gap:5px;background:none;border:none;padding:2px 4px;font-size:12.5px;font-weight:600;color:var(--muted2);border-radius:0;}
+.databtn:hover{color:var(--edge);background:none;border:none;}
+.databtn.danger:hover{color:var(--bad);}
 .cabstats{display:flex;gap:24px 72px;flex-wrap:wrap;margin:52px 0 4px;font-size:12px;color:var(--muted2);letter-spacing:.4px;text-transform:uppercase;}
 .cabstats span{display:flex;flex-direction:column;gap:6px;}
 .cabstats b{font-size:30px;font-weight:800;color:var(--ink);letter-spacing:0;text-transform:none;}
-.cabcols{display:grid;grid-template-columns:repeat(3,1fr);gap:48px;margin-top:46px;}
-@media(max-width:840px){.cabcols{grid-template-columns:1fr;gap:30px;}}
-/* колонка кабинета целиком кликабельна: заголовок со стрелкой вместо кнопки */
-.ccol{cursor:pointer;}
+/* прогресс по направлениям — один контейнер: пять ячеек с тонкими разделителями */
+.cabcols{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-top:46px;overflow:hidden;
+  background:var(--glass);border:1px solid var(--glassline);border-radius:var(--r-l);
+  backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);box-shadow:var(--shadow);}
+/* ячейка целиком кликабельна: иконка-плашка сверху, прогресс прижат к низу */
+.ccol{cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;padding:28px 26px;border-left:1px solid var(--line2);transition:background var(--t-fast);}
+.ccol:first-child{border-left:none;}
+.ccol:hover{background:var(--bg2);}
+.cic{display:flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:14px;background:var(--accentbg);color:var(--edge);margin-bottom:16px;}
+@media(max-width:840px){
+  .cabcols{grid-template-columns:1fr 1fr;}
+  .ccol{border-left:none;border-top:1px solid var(--line2);}
+  .ccol:nth-child(-n+2){border-top:none;}
+  .ccol:nth-child(even){border-left:1px solid var(--line2);}
+}
+@media(max-width:560px){
+  .cabcols{grid-template-columns:1fr;}
+  .ccol{border-left:none;}
+  .ccol:first-child{border-top:none;}
+  .ccol:nth-child(2){border-top:1px solid var(--line2);}
+}
 .ccol h3{display:flex;align-items:center;gap:9px;margin:0 0 7px;font-size:18px;font-weight:700;letter-spacing:-.01em;color:var(--ink);}
 .ccol h3 svg{color:var(--edge);flex:none;}
 .ccol h3 .go{display:inline-flex;color:var(--muted2);transition:var(--t-fast);}
 .ccol:hover h3 .go{color:var(--edge);transform:translateX(3px);}
-.ccol .num{margin:0 0 10px;font-size:13px;color:var(--muted);}
-.ccol .num b{color:var(--ink);font-weight:800;font-size:15px;}
-.ccol .bar{height:3px;max-width:250px;background:var(--line);border:none;border-radius:2px;overflow:hidden;}
+.ccol .num{margin:0 0 20px;font-size:13px;color:var(--muted);}
+.ccol .num b{color:var(--ink);font-weight:800;font-size:17px;}
+.ccol .bar{height:2px;width:100%;margin-top:auto;background:var(--line);border:none;border-radius:2px;overflow:hidden;}
 .ccol .bar i{display:block;height:100%;background:var(--accgrad);border-radius:2px;transition:var(--t-med);}
 /* данные: экспорт/импорт парой с пояснением, сброс — отдельно и в стороне */
-.cabdata{display:flex;flex-direction:column;align-items:center;gap:9px;margin-top:56px;}
-.cabdata .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
-.resetlink{margin-top:10px;background:none;border:none;padding:4px 8px;font-size:12px;color:var(--muted2);cursor:pointer;}
-.resetlink:hover{color:var(--bad);background:none;border-color:transparent;}
 
 /* ====== ГЛАВНАЯ: ЛЕНДИНГ ====== */
 .landing{display:grid;grid-template-columns:1fr auto;gap:56px;align-items:center;padding:26px 0 10px;}
@@ -580,7 +619,7 @@ html[data-theme="dark"] .phone{background:linear-gradient(165deg,#101727 0%,#0D1
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
 /* ====== ПОДВАЛ ====== */
-.appfoot{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:48px;padding-top:22px;border-top:1px solid var(--line);font-size:13px;color:var(--muted2);}
+.appfoot{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:22px;border-top:1px solid var(--line);font-size:13px;color:var(--muted2);}
 .appfoot a{display:inline-flex;align-items:center;gap:5px;color:var(--edge);font-weight:600;text-decoration:none;}
 .appfoot a:hover{text-decoration:underline;}
 .appfoot i{font-style:normal;color:var(--muted2);}

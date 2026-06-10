@@ -43,12 +43,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script>/* тема применяется до загрузки стилей, чтобы не мигало белым */
 (function(){var t=localStorage.getItem('msg_theme')||(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t;})();</script>
-<link rel="stylesheet" href="style.css?v=20260613c">
+<link rel="stylesheet" href="style.css?v=20260613d">
 </head>
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="brand" id="brandHome" title="На главную"><span class="logo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.5L3 21l2-5.6A8.5 8.5 0 1 1 21 11.5Z"/></svg></span><h1>Архитектура мессенджера</h1></div>
+    <div class="brand" id="brandHome" title="На главную"><span class="logo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.5L3 21l2-5.6A8.5 8.5 0 1 1 21 11.5Z"/></svg></span><h1>Архитектура <em>мессенджера</em></h1></div>
     <nav class="tabs">
       <button class="tab" data-view="course"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>Курс</button>
       <button class="tab" data-view="practice"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg>Практика</button>
@@ -196,9 +196,14 @@
 
   <!-- ============ MAP (native) ============ -->
   <section class="view" id="view-map">
-    <div class="mapgrid">
-      <div>
-        <div class="mapboard">
+    <header class="dhead">
+      <div class="dtext"><h2>Карта архитектуры</h2></div>
+      <div class="tools">
+        <select class="scnSelect" id="scnSelect"></select>
+        <button class="ghost iconbtn" id="mReset" title="Сбросить">↺</button>
+      </div>
+    </header>
+    <div class="mapboard">
           <svg id="mapSvg" viewBox="0 0 1080 700" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <marker id="marrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L7,3 L0,6 Z" fill="#aab4c9"/></marker>
@@ -212,28 +217,26 @@
             <g id="mlinks"></g>
             <g id="mnodes"></g>
           </svg>
-        </div>
-        <div class="capbar" id="mcap"><span class="cstep" id="mcapStep"></span><span id="mcapText"></span>
-          <div class="capdots" id="mDots"></div>
-          <div class="capnav">
-            <button class="ghost" id="mPrev">‹ Назад</button>
-            <button class="ghost" id="mPlay" title="Автопроигрывание">▶ Авто</button>
-            <span class="sn" id="mStepNo"></span>
-            <button class="ghost" id="mNext">Дальше ›</button>
-            <span class="kbdhint">← → листают шаги</span>
-          </div>
-        </div>
-        <details class="legend"><summary>Цвета слоёв и фигуры</summary><div class="legendrow" id="mlegend"></div></details>
+      <div class="mapzoom">
+        <button id="mzIn" title="Приблизить">+</button>
+        <button id="mzOut" title="Отдалить">−</button>
       </div>
-      <aside class="mapside">
-        <div class="scnpick">
-          <span class="lab">Сценарий</span>
-          <select class="scnSelect" id="scnSelect"></select>
-          <button class="ghost iconbtn" id="mReset" title="Сбросить">↺</button>
+      <div class="mapover">
+        <div class="capbar" id="mcap">
+          <div class="caphead">
+            <span class="cstep" id="mcapStep"></span>
+            <div class="capnav">
+              <button class="ghost arrow" id="mPrev" title="Назад (←)">‹</button>
+              <button class="ghost arrow" id="mNext" title="Дальше (→)">›</button>
+              <button class="mclose" id="mScnClose" title="Закрыть сценарий">×</button>
+            </div>
+          </div>
+          <span id="mcapText"></span>
         </div>
-        <div class="mappanel" id="mpanel"></div>
-      </aside>
+      </div>
+      <div class="mappanel" id="mpanel"></div>
     </div>
+    <details class="legend"><summary>Цвета слоёв и фигуры</summary><div class="legendrow" id="mlegend"></div></details>
   </section>
 
   <footer class="appfoot">
@@ -250,6 +253,6 @@
 <script src="tests.js?v=20260611g"></script>
 <script src="mapdata.js?v=20260611g"></script>
 <script src="apidb.js?v=20260611g"></script>
-<script src="app.js?v=20260613c"></script>
+<script src="app.js?v=20260613d"></script>
 </body>
 </html>

@@ -83,13 +83,14 @@ const ICONS={
   download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
   upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 8 5-5 5 5"/><path d="M12 3v12"/>',
   send:'<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+  braces:'<path d="M8 3H7.5A2.5 2.5 0 0 0 5 5.5V9a2 2 0 0 1-2 2 2 2 0 0 1 2 2v3.5A2.5 2.5 0 0 0 7.5 19H8"/><path d="M16 3h.5A2.5 2.5 0 0 1 19 5.5V9a2 2 0 0 0 2 2 2 2 0 0 0-2 2v3.5a2.5 2.5 0 0 1-2.5 2.5H16"/>',
+  calc:'<rect x="5" y="2.5" width="14" height="19" rx="2"/><path d="M9 7h6"/><path d="M9 12h.01M12 12h.01M15 12h.01M9 16h.01M12 16h.01M15 16h.01"/>',
 };
 function icon(name,size=16){return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;">${ICONS[name]||''}</svg>`;}
 function initStaticIcons(){
   document.getElementById('btnHint').innerHTML=icon('bulb',17);
   document.getElementById('btnReset').innerHTML=icon('rotate',15);
   document.getElementById('mReset').innerHTML=icon('rotate',15);
-  document.getElementById('mPlay').innerHTML=icon('play',12)+' Авто';
 }
 
 /* ==================== ТЕМА ==================== */
@@ -919,40 +920,51 @@ function renderCabinet(box){
       <span><b>${st.passed} / ${st.totalSec}</b>тестов сдано</span>
       <span><b>${gradesCount()}</b>повторов карточек</span>
     </div>`;
+  const ad=adStore();
+  const tDone=AD.TABLES.filter(t=>ad.tables[t.name]&&ad.tables[t.name].complete).length;
+  const es=estStats();
   const cols=[
     {ic:'book',t:'Курс',frac:st.courseKnow,num:`<b>${st.passed}</b> из ${st.totalSec} разделов пройдено`,act:'continueCourse()'},
     {ic:'blocks',t:'Схема',frac:st.buildFrac,num:`<b>${st.lvlsDone}</b> из ${LEVELS.length} уровней собрано`,act:"goTab('build')"},
+    {ic:'braces',t:'API · БД',frac:AD.TABLES.length?tDone/AD.TABLES.length:0,
+     num:`<b>${tDone}</b> из ${AD.TABLES.length} таблиц собрано${ad.api.n?` · API ${ad.api.ok}/${ad.api.n}`:''}`,act:"goTab('apidb')"},
     {ic:'cards',t:'Карточки',frac:st.cardsFrac,
      num:st.dueNow?`<b>${st.dueNow}</b> к повтору · ${st.seen}/${Q.length} изучено`:`<b>${st.seen}</b> из ${Q.length} изучено`,
      act:'startCards()'},
+    {ic:'calc',t:'Прикидки',frac:es.n?es.ok/es.n:0,
+     num:es.n?`<b>${es.ok}</b> из ${es.n} верно`:`<b>0</b> задач решено`,act:"goTab('estimate')"},
   ].map(p=>`
     <div class="ccol" onclick="${p.act}" title="Открыть">
-      <h3>${icon(p.ic,18)} ${p.t} <span class="go">${icon('arrow',15)}</span></h3>
+      <span class="cic">${icon(p.ic,22)}</span>
+      <h3>${p.t} <span class="go">${icon('arrow',15)}</span></h3>
       <div class="num">${p.num}</div>
       <div class="bar"><i style="width:${Math.round(p.frac*100)}%"></i></div>
     </div>`).join('');
   box.innerHTML=`
     <div class="cabhero">
-      <div class="ring" style="--p:${readiness}"><div class="hole"><b>${readiness}</b><small>ГОТОВНОСТЬ</small></div></div>
+      <div class="ring" style="--p:${readiness}"><div class="hole"><b>${readiness}<i>%</i></b><small>ГОТОВНОСТЬ</small></div></div>
       <div class="meta">
         <span class="lvlbadge">Уровень: ${label}</span>
         <h2>С возвращением!</h2>
         <p>${sub}</p>
       </div>
       <div class="heroctas">
-        ${nx?`<button class="primary" onclick="goTab('course');openSection('${nx.key}')">Продолжить курс · раздел ${nx.key}</button>`:`<button class="primary" onclick="goTab('course')">Перечитать курс</button>`}
+        ${nx?`<button class="primary" onclick="goTab('course');openSection('${nx.key}')">Продолжить курс · раздел ${nx.key}</button>`
+            :(st.lvlsDone<LEVELS.length
+              ?`<button class="primary" onclick="goTab('build')">Собирать схему · уровень ${st.lvlsDone+1} из ${LEVELS.length}</button>`
+              :`<button class="primary" onclick="startCards()">Учить карточки${st.dueNow?` · ${st.dueNow} к повтору`:''}</button>`)}
         <button class="ghosty" onclick="goTab('interview')">${icon('mic',14)} Прогон интервью</button>
+        <div class="herodata">
+          <button class="databtn" onclick="exportProgress()" title="Скачать копию прогресса файлом">${icon('download',13)} Экспорт</button>
+          <i>·</i>
+          <button class="databtn" onclick="document.getElementById('importFile').click()" title="Восстановить прогресс из файла">${icon('upload',13)} Импорт</button>
+          <i>·</i>
+          <button class="databtn danger" onclick="resetAll()" title="Сбросить весь прогресс">${icon('rotate',12)} Сброс</button>
+        </div>
       </div>
     </div>
     ${stats}
-    <div class="cabcols">${cols}</div>
-    <div class="cabdata">
-      <div class="row">
-        <button class="pillbtn" onclick="exportProgress()">${icon('download',14)} Экспорт</button>
-        <button class="pillbtn" onclick="document.getElementById('importFile').click()">${icon('upload',14)} Импорт</button>
-      </div>
-      <button class="resetlink" onclick="resetAll()">Сбросить весь прогресс…</button>
-    </div>`;
+    <div class="cabcols">${cols}</div>`;
 }
 function continueCourse(){
   goTab('course');
@@ -1423,11 +1435,31 @@ document.addEventListener('keydown',e=>{
   const LV={client:'--client',edge:'--edge',core:'--core',store:'--store',scale:'--scale',push:'--push',rtc:'--rtc'};
   const svgm=document.getElementById('mapSvg');
   const linksG=document.getElementById('mlinks'),nodesG=document.getElementById('mnodes'),panel=document.getElementById('mpanel');
-  const cap=document.getElementById('mcap'),capStep=document.getElementById('mcapStep'),capText=document.getElementById('mcapText'),stepNo=document.getElementById('mStepNo');
+  const cap=document.getElementById('mcap'),capStep=document.getElementById('mcapStep'),capText=document.getElementById('mcapText');
   const btnPrev=document.getElementById('mPrev'),btnNext=document.getElementById('mNext'),sel=document.getElementById('scnSelect');
-  const btnPlay=document.getElementById('mPlay'),dotsEl=document.getElementById('mDots');
   const LE={}; L.forEach(l=>LE[l.id]=[l.a[0],l.b[0]]);
-  const linkEls={},nodeEls={}; let curScn=null,stepIdx=0,mode=null,autoTimer=null;
+  const linkEls={},nodeEls={}; let curScn=null,stepIdx=0,mode=null;
+  /* ---- зум и панорама: колесо мыши, перетаскивание, кнопки +/− ---- */
+  const VBW=1080,VBH=700; let vb={x:0,y:0,w:VBW,h:VBH}; let mapDragged=false,mpan=null;
+  function applyVB(){svgm.setAttribute('viewBox',vb.x+' '+vb.y+' '+vb.w+' '+vb.h);svgm.style.cursor=vb.w<VBW?'grab':'';}
+  function clampVB(){vb.x=Math.max(0,Math.min(vb.x,VBW-vb.w));vb.y=Math.max(0,Math.min(vb.y,VBH-vb.h));}
+  function zoomAt(f,px,py){
+    const nw=Math.max(VBW/4,Math.min(VBW,vb.w*f)),nh=nw*VBH/VBW;
+    vb.x=px-(px-vb.x)*nw/vb.w; vb.y=py-(py-vb.y)*nh/vb.h; vb.w=nw; vb.h=nh; clampVB(); applyVB();
+  }
+  function svgXY(e){const r=svgm.getBoundingClientRect();return [vb.x+(e.clientX-r.left)/r.width*vb.w, vb.y+(e.clientY-r.top)/r.height*vb.h];}
+  svgm.addEventListener('wheel',e=>{e.preventDefault();const p=svgXY(e);zoomAt(e.deltaY>0?1.18:0.85,p[0],p[1]);},{passive:false});
+  document.getElementById('mzIn').onclick=()=>zoomAt(0.8,vb.x+vb.w/2,vb.y+vb.h/2);
+  document.getElementById('mzOut').onclick=()=>zoomAt(1.25,vb.x+vb.w/2,vb.y+vb.h/2);
+  svgm.addEventListener('pointerdown',e=>{if(vb.w>=VBW)return;mpan={sx:e.clientX,sy:e.clientY,vx:vb.x,vy:vb.y};mapDragged=false;});
+  window.addEventListener('pointermove',e=>{
+    if(!mpan)return;
+    const r=svgm.getBoundingClientRect();
+    if(Math.abs(e.clientX-mpan.sx)+Math.abs(e.clientY-mpan.sy)>5)mapDragged=true;
+    vb.x=mpan.vx-(e.clientX-mpan.sx)/r.width*vb.w; vb.y=mpan.vy-(e.clientY-mpan.sy)/r.height*vb.h;
+    clampVB(); applyVB();
+  });
+  window.addEventListener('pointerup',()=>{mpan=null;setTimeout(()=>{mapDragged=false;},0);});
   function anchor(id,side,t){const n=N[id];t=(t===undefined)?.5:t;
     if(side==='L')return[n.x,n.y+n.h*t];if(side==='R')return[n.x+n.w,n.y+n.h*t];
     if(side==='T')return[n.x+n.w*t,n.y];return[n.x+n.w*t,n.y+n.h];}
@@ -1457,7 +1489,7 @@ document.addEventListener('keydown',e=>{
     const t2=el('text',{x:n.x+n.w/2,y:cy+5,'text-anchor':'middle',class:'sub'});t2.textContent=n.sub;
     const t3=el('text',{x:n.x+n.w/2,y:cy+18,'text-anchor':'middle',class:'tech'});t3.textContent=n.tech;
     g.appendChild(t1);g.appendChild(t2);g.appendChild(t3);
-    g.addEventListener('click',e=>{e.stopPropagation();selectNode(id);});
+    g.addEventListener('click',e=>{e.stopPropagation();if(mapDragged)return;selectNode(id);});
     nodeEls[id]=g;nodesG.appendChild(g);
   }
   document.getElementById('mlegend').innerHTML=Object.keys(LV).map(k=>`<span><i style="background:var(${LV[k]})"></i>${LN[k]}</span>`).join('')+'<span>⬭ хранилище · ▥ очередь · ▔ клиент</span>';
@@ -1470,19 +1502,32 @@ document.addEventListener('keydown',e=>{
     for(const id in linkEls){linkEls[id].classList.remove('dim','active','statusline','rtcline');linkEls[id].setAttribute('marker-end','url(#marrow)');}
     cap.classList.remove('rtc');
   }
-  function fullReset(){stopAuto();mode=null;curScn=null;stepIdx=0;clearC();cap.classList.remove('show');sel.value='';dotsEl.innerHTML='';
-    panel.innerHTML=`<span class="tag">Подсказка</span><h3>Карта архитектуры</h3><p class="hint">Кликни по любому компоненту — что он делает и зачем. Или выбери <b>сценарий</b> выше и пройди его по шагам: кнопками, стрелками ← → на клавиатуре или «▶ Авто». Пунктирные узлы — сервисные надстройки; розовая зона внизу — медиа-тракт звонков (RTC).</p>`;}
-  function selectNode(id){stopAuto();mode='node';clearC();cap.classList.remove('show');sel.value='';dotsEl.innerHTML='';
+  function fullReset(){mode=null;curScn=null;stepIdx=0;clearC();cap.classList.remove('show');sel.value='';
+    panel.classList.add('show');panel.style.cssText='';
+    panel.innerHTML='<p class="mhint">Кликни по компоненту — что он делает и зачем. Или выбери <b>сценарий</b> и листай шаги стрелками ← →. Колесо мыши — зум, перетаскивание — обзор.</p>';
+    vb={x:0,y:0,w:VBW,h:VBH};applyVB();}
+  function selectNode(id){mode='node';clearC();cap.classList.remove('show');sel.value='';
+    panel.classList.add('show');
     nodeEls[id].classList.add('sel');const n=N[id],i=INFO[id];
-    panel.innerHTML=`<span class="tag">${LN[n.layer]}</span><h3>${n.label}</h3><div class="secref">${i.sec}</div>
+    panel.innerHTML=`<button class="mclose" title="Закрыть">×</button>
+      <span class="tag">${LN[n.layer]}</span><h3>${n.label}</h3><div class="secref">${i.sec}</div>
       <div class="row"><b>Что делает</b><span>${i.what}</span></div>
       <div class="row"><b>Зачем нужен</b><span>${i.why}</span></div>
-      <div class="row"><b>Технологии</b><span>${n.tech}</span></div>`;}
-  function startScenario(id){stopAuto();mode='scn';curScn=SCN.find(s=>s.id===id);stepIdx=0;clearC();cap.classList.add('show');
-    panel.innerHTML=`<span class="tag">${curScn.cat}</span><h3>${curScn.title}</h3><div class="secref">${curScn.sub}</div>
-      <div class="row"><b>Что показываем</b><span>${curScn.intro}</span></div>`;
-    renderDots();renderStep();}
-  function renderDots(){dotsEl.innerHTML='';curScn.steps.forEach((s,i)=>{const b=document.createElement('button');b.className='dot';b.title='Шаг '+(i+1);b.onclick=()=>{stopAuto();stepIdx=i;renderStep();};dotsEl.appendChild(b);});}
+      <div class="row"><b>Технологии</b><span>${n.tech}</span></div>`;
+    panel.querySelector('.mclose').onclick=fullReset;
+    // карточка встаёт рядом с кликнутым узлом: справа, если не влезает — слева/в границах
+    const br=document.querySelector('.mapboard').getBoundingClientRect();
+    const nr=nodeEls[id].getBoundingClientRect();
+    const pw=320;let px=nr.right-br.left+12;
+    if(px+pw+12>br.width)px=nr.left-br.left-pw-12;
+    px=Math.max(12,Math.min(px,br.width-pw-12));
+    let py=nr.top-br.top-4;
+    panel.style.cssText=`left:${px}px;top:${py}px;width:${pw}px;`;
+    py=Math.min(py,br.height-panel.offsetHeight-12);
+    panel.style.top=Math.max(12,py)+'px';}
+  function startScenario(id){mode='scn';curScn=SCN.find(s=>s.id===id);stepIdx=0;clearC();cap.classList.add('show');
+    panel.classList.remove('show'); // контекст сценария живёт в полосе шагов
+    renderStep();}
   function renderStep(){const steps=curScn.steps,st=steps[stepIdx];
     for(const id in nodeEls){nodeEls[id].classList.remove('hl','active','sel','act-status','act-rtc');nodeEls[id].classList.add('dim');}
     for(const id in linkEls){linkEls[id].classList.remove('active','statusline','rtcline');linkEls[id].classList.add('dim');linkEls[id].setAttribute('marker-end','url(#marrow)');}
@@ -1490,22 +1535,17 @@ document.addEventListener('keydown',e=>{
     st.links.forEach(id=>{const l=linkEls[id];if(!l)return;l.classList.remove('dim');l.classList.add('active');if(st.status)l.classList.add('statusline');if(st.rtc)l.classList.add('rtcline');l.setAttribute('marker-end','url(#marrowA)');
       const e=LE[id];if(e)e.forEach(nn=>{const ne=nodeEls[nn];if(ne)ne.classList.remove('dim');});});
     cap.classList.toggle('rtc',!!st.rtc);
-    capStep.textContent=`Шаг ${stepIdx+1} / ${steps.length}`;capText.textContent=st.cap;stepNo.textContent=`${stepIdx+1} / ${steps.length}`;
-    btnPrev.disabled=stepIdx===0;btnNext.disabled=stepIdx===steps.length-1;
-    [...dotsEl.children].forEach((d,i)=>d.className='dot'+(i===stepIdx?' on':(i<stepIdx?' done':'')));}
-  function stopAuto(){if(autoTimer){clearInterval(autoTimer);autoTimer=null;}btnPlay.innerHTML=icon('play',12)+' Авто';}
-  function toggleAuto(){if(autoTimer){stopAuto();return;}if(!curScn)return;
-    if(stepIdx>=curScn.steps.length-1)stepIdx=0;renderStep();btnPlay.innerHTML=icon('pause',12)+' Пауза';
-    autoTimer=setInterval(()=>{if(stepIdx<curScn.steps.length-1){stepIdx++;renderStep();}else{stopAuto();}},2600);}
-  btnNext.onclick=()=>{stopAuto();if(curScn&&stepIdx<curScn.steps.length-1){stepIdx++;renderStep();}};
-  btnPrev.onclick=()=>{stopAuto();if(curScn&&stepIdx>0){stepIdx--;renderStep();}};
-  btnPlay.onclick=toggleAuto;
+    capStep.textContent=`${curScn.title} · шаг ${stepIdx+1} / ${steps.length}`;capText.textContent=st.cap;
+    btnPrev.disabled=stepIdx===0;btnNext.disabled=stepIdx===steps.length-1;}
+  btnNext.onclick=()=>{if(curScn&&stepIdx<curScn.steps.length-1){stepIdx++;renderStep();}};
+  btnPrev.onclick=()=>{if(curScn&&stepIdx>0){stepIdx--;renderStep();}};
+  document.getElementById('mScnClose').onclick=fullReset;
   document.getElementById('mReset').onclick=fullReset;
-  svgm.addEventListener('click',()=>{if(mode==='node')fullReset();});
+  svgm.addEventListener('click',()=>{if(mapDragged)return;if(mode==='node')fullReset();});
   document.addEventListener('keydown',e=>{
     if(!document.getElementById('view-map').classList.contains('on')||!curScn)return;
-    if(e.key==='ArrowRight'){e.preventDefault();stopAuto();if(stepIdx<curScn.steps.length-1){stepIdx++;renderStep();}}
-    else if(e.key==='ArrowLeft'){e.preventDefault();stopAuto();if(stepIdx>0){stepIdx--;renderStep();}}
+    if(e.key==='ArrowRight'){e.preventDefault();if(stepIdx<curScn.steps.length-1){stepIdx++;renderStep();}}
+    else if(e.key==='ArrowLeft'){e.preventDefault();if(stepIdx>0){stepIdx--;renderStep();}}
   });
   fullReset();
 })();
