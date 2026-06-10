@@ -888,48 +888,46 @@ function renderCabinet(box){
   else{label='Готова';sub='Ты почти у цели. Держи карточки на повторе и прогоняй сценарии звонков и E2EE на карте.';}
   const nx=courseOrder().find(x=>x.type==='sec'&&!secPassed(x.key));
   const sd=streakDays();
-  const stats=[
-    {ic:'clock',v:fmtTime(_timeAcc),l:'в тренажёре'},
-    {ic:'flame',v:sd,l:pluralDay(sd)},
-    {ic:'checkc',v:`${st.passed} / ${st.totalSec}`,l:'тестов сдано'},
-    {ic:'rotate',v:gradesCount(),l:'повторов карточек'},
-  ].map(s=>`<div class="stat-tile"><span class="ic" style="color:var(--edge);">${icon(s.ic,19)}</span><span class="v">${s.v}</span><span class="l">${s.l}</span></div>`).join('');
+  const stats=`<div class="cabstats">
+      <span><b>${fmtTime(_timeAcc)}</b> в тренажёре</span>
+      <span><b>${sd}</b> ${pluralDay(sd)}</span>
+      <span><b>${st.passed}/${st.totalSec}</b> тестов</span>
+      <span><b>${gradesCount()}</b> повторов карточек</span>
+    </div>`;
   const courseDone=st.passed>=st.totalSec;
-  const pillars=[
-    {cls:'k-course',ic:'book',t:'Курс',frac:st.courseKnow,big:`<b>${st.passed}</b> / ${st.totalSec} разделов пройдено`,
-     btn:courseDone?'Перечитать курс →':'Продолжить курс →',act:'continueCourse()',prim:!courseDone},
-    {cls:'k-build',ic:'blocks',t:'Схема',frac:st.buildFrac,big:`<b>${st.lvlsDone}</b> / ${LEVELS.length} уровней собрано`,
-     btn:'Тренировать сборку →',act:"goTab('build')",prim:false},
-    {cls:'k-cards',ic:'cards',t:'Карточки',frac:st.cardsFrac,
-     big:st.dueNow?`<b>${st.dueNow}</b> к повтору · ${st.seen}/${Q.length} изучено`:`<b>${st.seen}</b> / ${Q.length} изучено`,
-     btn:st.dueNow?`Повторить ${st.dueNow} →`:'Учить карточки →',act:'startCards()',prim:st.dueNow>0},
+  const cols=[
+    {ic:'book',t:'Курс',frac:st.courseKnow,num:`<b>${st.passed}</b> из ${st.totalSec} разделов пройдено`,
+     btn:courseDone?'Перечитать курс →':(nx?`К разделу ${nx.key} →`:'Продолжить курс →'),act:'continueCourse()'},
+    {ic:'blocks',t:'Схема',frac:st.buildFrac,num:`<b>${st.lvlsDone}</b> из ${LEVELS.length} уровней собрано`,
+     btn:'Тренировать сборку →',act:"goTab('build')"},
+    {ic:'cards',t:'Карточки',frac:st.cardsFrac,
+     num:st.dueNow?`<b>${st.dueNow}</b> к повтору · ${st.seen}/${Q.length} изучено`:`<b>${st.seen}</b> из ${Q.length} изучено`,
+     btn:st.dueNow?`Повторить ${st.dueNow} →`:'Учить карточки →',act:'startCards()'},
   ].map(p=>`
-    <div class="pcard ${p.cls}">
-      <div class="ic" style="color:var(--edge);">${icon(p.ic,22)}</div><h3>${p.t}</h3>
-      <div class="big">${p.big}</div>
+    <div class="ccol">
+      <h3>${icon(p.ic,18)} ${p.t}</h3>
+      <div class="num">${p.num}</div>
       <div class="bar"><i style="width:${Math.round(p.frac*100)}%"></i></div>
-      <div class="spacer"></div>
-      <button class="${p.prim?'primary':''}" onclick="${p.act}">${p.btn}</button>
+      <button onclick="${p.act}">${p.btn}</button>
     </div>`).join('');
   box.innerHTML=`
-    <div class="hero" style="margin-bottom:14px;">
+    <div class="cabhero">
       <div class="ring" style="--p:${readiness}"><div class="hole"><b>${readiness}</b><small>ГОТОВНОСТЬ</small></div></div>
       <div class="meta">
         <span class="lvlbadge">Уровень: ${label}</span>
         <h2>С возвращением!</h2>
         <p>${sub}</p>
-        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+        ${stats}
+        <div class="ctas">
           ${nx?`<button class="primary" onclick="goTab('course');openSection('${nx.key}')">Продолжить курс · раздел ${nx.key}</button>`:`<button class="primary" onclick="goTab('course')">Перечитать курс</button>`}
-          ${st.dueNow?`<button onclick="startCards()">${icon('cards',14)} Повторить ${st.dueNow}</button>`:''}
-          <button onclick="goTab('interview')">${icon('mic',14)} Прогон интервью</button>
+          <button class="ghosty" onclick="goTab('interview')">${icon('mic',14)} Прогон интервью</button>
         </div>
       </div>
     </div>
-    <div class="stats">${stats}</div>
-    <div class="pillars">${pillars}</div>
-    <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:20px;">
-      <button class="linkbtn" style="width:auto;padding:6px 12px;" onclick="exportProgress()">${icon('download',13)} Экспорт прогресса</button>
-      <button class="linkbtn" style="width:auto;padding:6px 12px;" onclick="resetAll()">${icon('rotate',13)} Сбросить весь прогресс</button>
+    <div class="cabcols">${cols}</div>
+    <div class="cabtools">
+      <button class="iconbtn" title="Экспорт прогресса" onclick="exportProgress()">${icon('download',16)}</button>
+      <button class="iconbtn danger" title="Сбросить весь прогресс" onclick="resetAll()">${icon('rotate',16)}</button>
     </div>`;
 }
 function continueCourse(){

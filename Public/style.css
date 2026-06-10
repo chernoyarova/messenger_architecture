@@ -156,42 +156,37 @@
   .note{color:var(--muted2);font-size:12px;margin-top:8px;}
   a.lnk{color:var(--edge);text-decoration:none;} a.lnk:hover{text-decoration:underline;}
 
-  /* ====== DASHBOARD ====== */
-  .hero{position:relative;overflow:hidden;background:
-      radial-gradient(120% 140% at 0% 0%, rgba(47,107,255,.10), transparent 45%),
-      radial-gradient(120% 140% at 100% 100%, rgba(91,99,230,.10), transparent 45%),
-      var(--panel);
-    border:1px solid var(--line);border-radius:20px;padding:26px 28px;display:flex;gap:28px;align-items:center;flex-wrap:wrap;margin-bottom:14px;box-shadow:0 6px 24px rgba(20,30,55,.06);}
-  .ring{position:relative;width:142px;height:142px;border-radius:50%;flex:none;
+  /* ====== КАБИНЕТ: без коробок — кольцо и типографика на чистом фоне ====== */
+  .cabhero{display:flex;gap:34px;align-items:center;flex-wrap:wrap;padding:26px 0 4px;}
+  .ring{position:relative;width:148px;height:148px;border-radius:50%;flex:none;
     background:conic-gradient(from -90deg,#5A9CE0,#7FB9EC calc(var(--p,0)*3.6deg),rgba(110,150,200,.18) 0);
-    box-shadow:0 4px 16px rgba(47,107,255,.18);}
-  .ring .hole{position:absolute;inset:13px;background:var(--panel);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    box-shadow:0 10px 30px rgba(47,107,255,.18);}
+  .ring .hole{position:absolute;inset:13px;background:var(--bg);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;}
   .ring .hole b{font-size:42px;font-weight:900;line-height:1;color:var(--ink);}
   .ring .hole small{font-size:11px;color:var(--muted2);margin-top:3px;letter-spacing:1px;}
-  .hero .meta{flex:1;min-width:230px;}
-  .hero .meta .lvlbadge{display:inline-block;font-size:11.5px;font-weight:700;color:var(--edge);background:var(--accentbg);border:1px solid var(--accentline);border-radius:20px;padding:4px 13px;margin-bottom:11px;letter-spacing:.2px;}
-  .hero .meta h2{margin:0 0 6px;font-size:25px;font-weight:900;letter-spacing:-.4px;}
-  .hero .meta p{margin:0;color:var(--muted);font-size:14px;line-height:1.5;max-width:46ch;}
-
-  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
-  @media(max-width:680px){.stats{grid-template-columns:repeat(2,1fr);}}
-  .stat-tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 1px 2px rgba(20,30,55,.04);}
-  .stat-tile .ic{font-size:17px;line-height:1;}
-  .stat-tile .v{display:block;font-size:23px;font-weight:900;color:var(--ink);line-height:1.1;margin-top:7px;}
-  .stat-tile .l{font-size:12px;color:var(--muted);}
-
-  .pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
-  @media(max-width:780px){.pillars{grid-template-columns:1fr;}}
-  .pcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(20,30,55,.04);}
-  .pcard .ic{font-size:24px;line-height:1;}
-  .pcard h3{margin:10px 0 3px;font-size:17px;font-weight:800;}
-  .pcard .big{font-size:13px;color:var(--muted);margin:0 0 12px;}
-  .pcard .big b{color:var(--ink);font-weight:800;font-size:15px;}
-  .pcard .bar{height:8px;background:var(--bg2);border-radius:5px;overflow:hidden;margin-bottom:14px;}
-  .pcard .bar i{display:block;height:100%;border-radius:5px;transition:.45s;}
-  .pcard.k-course .bar i{background:var(--core);} .pcard.k-build .bar i{background:var(--client);} .pcard.k-cards .bar i{background:var(--store);}
-  .pcard .spacer{flex:1;}
-  .pcard button{width:100%;}
+  .cabhero .meta{flex:1;min-width:250px;}
+  .cabhero .meta .lvlbadge{display:inline-block;font-size:11.5px;font-weight:700;color:var(--edge);background:var(--accentbg);border:1px solid var(--accentline);border-radius:20px;padding:4px 13px;margin-bottom:11px;letter-spacing:.2px;}
+  .cabhero .meta h2{margin:0 0 6px;font-size:26px;font-weight:900;letter-spacing:-.4px;}
+  .cabhero .meta p{margin:0;color:var(--muted);font-size:14px;line-height:1.5;max-width:52ch;}
+  .cabstats{display:flex;gap:14px;flex-wrap:wrap;margin-top:13px;font-family:'Space Mono',monospace;font-size:12px;color:var(--muted2);}
+  .cabstats b{color:var(--ink);font-weight:700;}
+  .cabhero .ctas{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;}
+  .cabhero .ctas .primary{padding:12px 24px;font-size:14.5px;border-radius:999px;background:var(--warmgrad);box-shadow:var(--warmsh);}
+  .cabhero .ctas .ghosty{display:inline-flex;align-items:center;gap:7px;padding:12px 20px;font-size:14px;border-radius:999px;background:var(--bg2);border:1px solid var(--glassline);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
+  .cabcols{display:grid;grid-template-columns:repeat(3,1fr);gap:44px;margin-top:46px;}
+  @media(max-width:840px){.cabcols{grid-template-columns:1fr;gap:30px;}}
+  .ccol h3{display:flex;align-items:center;gap:9px;margin:0 0 7px;font-size:17px;font-weight:700;letter-spacing:-.01em;color:var(--ink);}
+  .ccol h3 svg{color:var(--edge);flex:none;}
+  .ccol .num{margin:0 0 10px;font-size:13.5px;color:var(--muted);}
+  .ccol .num b{color:var(--ink);font-weight:800;font-size:15px;}
+  .ccol .bar{height:3px;max-width:250px;background:var(--line);border-radius:2px;overflow:hidden;margin-bottom:15px;}
+  .ccol .bar i{display:block;height:100%;background:var(--accgrad);border-radius:2px;transition:.45s;}
+  .ccol button{border-radius:999px;padding:8px 18px;font-size:13px;background:var(--bg2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
+  .ccol button:hover{border-color:var(--edge);color:var(--edge);}
+  .cabtools{display:flex;gap:10px;justify-content:center;margin-top:48px;}
+  .cabtools .iconbtn{background:var(--glass);border:1px solid var(--glassline);box-shadow:var(--shadow);color:var(--muted);backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);}
+  .cabtools .iconbtn:hover{color:var(--ink);border-color:var(--edge);}
+  .cabtools .iconbtn.danger:hover{color:var(--bad);border-color:var(--bad);}
 
   /* ====== MAP (native) ====== */
   .mapgrid{display:grid;grid-template-columns:1fr 332px;gap:14px;align-items:start;}
@@ -445,15 +440,14 @@ html[data-theme="dark"] body::after{background:
   radial-gradient(420px 420px at -4% -6%, rgba(90,156,224,.10), transparent 70%),
   radial-gradient(480px 480px at 104% 36%, rgba(127,185,236,.07), transparent 70%);}
 
-.panel,.toc,.reader,.sidecard,.flash,.pcard,.stat-tile,.mappanel,.scnpick,.palette,.ivpanel,.hero,.dragghost{
+.panel,.toc,.reader,.sidecard,.flash,.mappanel,.scnpick,.palette,.ivpanel,.dragghost{
   background:var(--glass);border:1px solid var(--glassline);
   backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);
   box-shadow:var(--shadow);}
 .board,.mapboard{background:var(--boardbg);border:1px solid var(--glassline);
   backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);box-shadow:var(--shadow);}
-.reader,.flash,.pcard,.ivpanel{border-radius:20px;}
-.panel,.toc,.sidecard,.stat-tile,.mappanel,.scnpick,.palette,.board,.mapboard{border-radius:18px;}
-.hero{border-radius:24px;background:var(--glass);}
+.reader,.flash,.ivpanel{border-radius:20px;}
+.panel,.toc,.sidecard,.mappanel,.scnpick,.palette,.board,.mapboard{border-radius:18px;}
 /* светлая тема: ридер курса молочный и почти непрозрачный — голубой фон страницы не просвечивает под текстом */
 html[data-theme="light"] .reader{background:rgba(255,255,255,.92);}
 
@@ -462,7 +456,7 @@ html[data-theme="light"] .reader{background:rgba(255,255,255,.92);}
 .brand h1{font-size:15.5px;font-weight:700;letter-spacing:-.01em;}
 .iconbtn{display:flex;align-items:center;justify-content:center;border-radius:50%;width:40px;height:40px;padding:0;}
   header.top .iconbtn{background:var(--glass);border:1px solid var(--glassline);box-shadow:var(--shadow);backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);}
-.tab svg,.pseg svg,.pcard .ic svg,.stat-tile .ic svg{flex:none;display:block;}
+.tab svg,.pseg svg{flex:none;display:block;}
 /* компактный хедер на узких экранах — иначе табы не влезают и страница уезжает вправо */
 @media(max-width:430px){
   header.top{gap:6px;}
@@ -554,9 +548,9 @@ html[data-theme="dark"] .phone{background:linear-gradient(165deg,#101727 0%,#0D1
 /* ====== ЛЁГКОСТЬ: рамки только там, где они несут смысл ====== */
 button{border-color:transparent;}
 .pill,.chip,.toc .ti,.introsec,.pchip,.flash .secpill,.selsec,.lvlSelect,.scnSelect,
-.estrow input,#recallInput,.pseg,.adpill,.mbtn,.tchip,.rchip,.qexp,.stat-tile,.pillrow .pill,
+.estrow input,#recallInput,.pseg,.adpill,.mbtn,.tchip,.rchip,.qexp,.pillrow .pill,
 .scnpick,.capdots .dot{border-color:transparent;}
-.pbar,.pcard .bar,.introprog .bar{border:none;}
+.pbar,.ccol .bar,.introprog .bar{border:none;}
 .heat .cell{border:none;}
 .capbar{border-color:transparent;border-left:3px solid var(--edge);}
 .capbar.rtc{border-left-color:var(--rtc);}
