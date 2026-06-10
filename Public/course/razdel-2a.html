@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Что такое ручка-эндпоинт; как вывести API из требований; HTTP против WebSocket по направлению.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://chernoyarova.github.io/messenger_architecture/Public/course/razdel-2a.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Раздел 2A. API-ручки (эндпоинты) — Архитектура мессенджера">
+<meta property="og:description" content="Что такое ручка-эндпоинт; как вывести API из требований; HTTP против WebSocket по направлению.">
+<meta property="og:url" content="https://chernoyarova.github.io/messenger_architecture/Public/course/razdel-2a.html">
+<meta property="og:locale" content="ru_RU">
+<title>Раздел 2A. API-ручки (эндпоинты) — Архитектура мессенджера</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "TechArticle",
+ "headline": "Раздел 2A. API-ручки (эндпоинты)",
+ "description": "Что такое ручка-эндпоинт; как вывести API из требований; HTTP против WebSocket по направлению.",
+ "inLanguage": "ru",
+ "url": "https://chernoyarova.github.io/messenger_architecture/Public/course/razdel-2a.html",
+ "isPartOf": {
+  "@type": "Course",
+  "name": "Архитектура мессенджера",
+  "url": "https://chernoyarova.github.io/messenger_architecture/Public/course/"
+ }
+}
+</script>
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+<div class="wrap">
+<header class="crumbs">
+  <a href="index.html">Курс «Архитектура мессенджера»</a> · <span>Часть 1 · Картина целиком</span>
+</header>
+<article>
+<h1>Раздел 2A. API-ручки (эндпоинты)</h1>
+<p class="sub">Что такое ручка-эндпоинт; как вывести API из требований; HTTP против WebSocket по направлению.</p>
+<div class="md">
+<p>Это короткий, но важный практический раздел между «требованиями» (Раздел 2) и «соединением» (Раздел 3). Сняли требования — полезно набросать <strong>API-поверхность</strong>: список ручек, по которым клиент будет дёргать сервер. Это показывает интервьюеру, что ты умеешь переводить требования в конкретный контракт.</p>
+<h2>Что такое API-ручка</h2>
+<p><strong>Ручка (endpoint)</strong> — это адрес, по которому клиент общается с сервером, и одно конкретное действие за ним. <code>POST /messages</code> — отправить сообщение, <code>GET /messages/{chat_id}</code> — загрузить историю.</p>
+<p>Аналогия: <strong>меню в ресторане</strong>. Клиент (телефон) говорит серверу «хочу вот это» и называет конкретное блюдо — ручку. Меню — это список доступных действий.</p>
+<h2>Как понять, какие ручки нужны</h2>
+<p>Идёшь по <strong>функциональным требованиям</strong> и для каждого спрашиваешь — <em>как клиент это запросит?</em> Одно действие пользователя → одна ручка.</p>
+<h2>Нужны ли ручки, если есть WebSocket? Да — это разные оси</h2>
+<p>Главная ошибка — делить «фича → HTTP или WS». Делить надо по <strong>направлению</strong>:</p>
+<ul>
+<li><strong>Входящий запрос (клиент → сервер)</strong> — разовое действие. Обычно HTTP-ручка: загрузить историю, создать чат, добавить участника, выложить файл. Саму <strong>отправку</strong> сообщения тоже можно слать ручкой <code>POST /messages</code> (вернёт <code>message_id</code>/seq и закроет идемпотентность) — <em>или</em> кадром по уже открытому WebSocket. Оба варианта валидны; на интервью проговори, что выбор есть.</li>
+<li><strong>Исходящая доставка (сервер → клиент)</strong> — <strong>всегда push по WebSocket</strong>. Ручкой нельзя дотолкнуть данные тому, кто прямо сейчас ничего не спрашивает. Сюда: новое сообщение получателю, «печатает…», онлайн-статус, галочки доставки/прочтения, входящий звонок.</li>
+</ul>
+<p>Простое правило: <strong>запросил один раз → HTTP; прилетает само и постоянно → WebSocket.</strong> Открыл приложение → по HTTP подтянул список чатов и историю → поднял WebSocket → дальше всё новое идёт по нему.</p>
+<h2>Ручка почти всегда тянет за собой событие</h2>
+<p>Действие и оповещение — разные вещи:</p>
+<ul>
+<li><code>PUT /messages/{id}</code> (редактировать), <code>DELETE /messages/{id}</code> (удалить), <code>POST /chats/{id}/members</code> (добавить) — <strong>HTTP-ручка</strong> сохраняет изменение в БД…</li>
+<li>…а потом сервер <strong>по WebSocket</strong> рассылает остальным участникам событие: «сообщение изменилось», «участник добавлен» — их клиенты обновляют экран.</li>
+</ul>
+<p>То же и с отправкой: <code>POST /messages</code> (или WS-кадр) сохраняет и присваивает seq → сервер пушит сообщение получателям по их WebSocket. <strong>Ручки не работают в одиночку</strong> — почти каждая тянет за собой realtime-событие.</p>
+<h2>Контракт реального времени (события WebSocket)</h2>
+<p>У постоянного канала свой «список действий» — это события, а не URL:
+<code>message.new</code>, <code>message.edited</code>, <code>message.deleted</code>, <code>receipt</code> (доставлено/прочитано), <code>typing</code>, <code>presence</code>, <code>call.invite/answer/ice</code>. Это тоже часть API — назови её отдельно от REST-ручек.</p>
+<h2>Базовый набор HTTP-ручек</h2>
+<pre><code>GET    /messages/{chat_id}?after={seq}&amp;limit=50   история, пагинация по курсору
+PUT    /messages/{msg_id}                         редактировать (+ WS-событие всем)
+DELETE /messages/{msg_id}                         удалить (+ WS-событие всем)
+POST   /messages                                  отправить (можно и по WS; вернёт
+                                                  message_id, идемпотентность client_msg_id)
+POST   /chats                                     создать чат
+GET    /chats                                     список моих чатов
+POST   /chats/{id}/members                        добавить участника
+DELETE /chats/{id}/members/{user_id}              удалить участника
+GET    /users/{id}/presence                       снимок статуса (живое — по WS)
+POST   /media                                     pre-signed URL для загрузки
+GET    /media/{file_id}                           скачать (обычно прямой CDN-URL)
+POST   /auth/login · /auth/refresh · POST /devices · GET /users/me
+POST   /keys · GET /users/{id}/prekeys            ключи для E2EE (Раздел 15)
+</code></pre>
+<h2>Что часто забывают (а спрашивают)</h2>
+<ul>
+<li><strong>Аутентификация и устройства.</strong> <code>POST /auth/login</code>, <code>/auth/refresh</code>, <code>POST /devices</code> (регистрация устройства и его push-токена APNs/FCM, Раздел 5), <code>GET /users/me</code>. Без этого нет ни сессии, ни мультидевайса (Раздел 10).</li>
+<li><strong>Ключи для E2EE.</strong> <code>POST /keys</code> (выложить prekeys), <code>GET /users/{id}/prekeys</code> (забрать чужие) — асинхронная установка ключа из X3DH (Раздел 15).</li>
+<li><strong>История — это пагинация по курсору</strong>, а не «отдай всё»: <code>?after={seq}&amp;limit=50</code>. Тот же курсор лежит в основе догона после офлайна (Разделы 6, 10).</li>
+<li><strong>Идемпотентность отправки.</strong> <code>POST /messages</code> несёт <code>client_msg_id</code>, чтобы ретраи по плохой сети не задвоили сообщение (Раздел 6).</li>
+<li><strong>Медиа грузится не через API.</strong> <code>POST /media</code> возвращает pre-signed URL, клиент льёт файл <strong>напрямую в объектное хранилище/CDN</strong>, минуя API-гейтвей; в сообщении едет только ссылка (Раздел 9).</li>
+<li><strong>REST-гигиена.</strong> Версия в пути (<code>/v1/...</code>), статус-коды (200/201/4xx), авторизация заголовком (<code>Authorization: Bearer …</code>), rate-limit, единый формат ошибок.</li>
+</ul>
+
+</div>
+</article>
+<nav class="pn">
+<a class="prev" href="razdel-2.html">← Раздел 2. Требования и рамки задачи</a>
+<a class="next" href="razdel-3.html">Раздел 3. Как клиент держит связь с сервером →</a>
+</nav>
+<footer class="foot">
+  <a href="../trainer.html#course/2A">Открыть этот раздел в интерактивном тренажёре →</a><br>
+  <a href="index.html">Оглавление курса</a> · <a href="https://chernoyarova.github.io/messenger_architecture/">Тренажёр: карта, флеш-карточки, сборка схемы</a>
+</footer>
+</div>
+</body>
+</html>

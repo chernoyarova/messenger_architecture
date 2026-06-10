@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Бесплатный курс по архитектуре мессенджера: 26 разделов о постоянных соединениях, доставке сообщений, шардировании, E2EE и звонках. Подготовка к System Design собеседованиям.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://chernoyarova.github.io/messenger_architecture/Public/course/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Курс «Архитектура мессенджера» — оглавление">
+<meta property="og:description" content="Бесплатный курс по архитектуре мессенджера: 26 разделов о постоянных соединениях, доставке сообщений, шардировании, E2EE и звонках. Подготовка к System Design собеседованиям.">
+<meta property="og:url" content="https://chernoyarova.github.io/messenger_architecture/Public/course/">
+<meta property="og:locale" content="ru_RU">
+<title>Курс «Архитектура мессенджера» — оглавление</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "Course",
+ "name": "Архитектура мессенджера",
+ "description": "Бесплатный курс по архитектуре мессенджера: 26 разделов о постоянных соединениях, доставке сообщений, шардировании, E2EE и звонках. Подготовка к System Design собеседованиям.",
+ "url": "https://chernoyarova.github.io/messenger_architecture/Public/course/",
+ "inLanguage": "ru",
+ "isAccessibleForFree": true,
+ "provider": {
+  "@type": "Person",
+  "name": "chernoyarova"
+ },
+ "teaches": [
+  "System Design",
+  "Messenger Architecture",
+  "WebSocket",
+  "E2EE",
+  "Signal Protocol"
+ ],
+ "hasCourseInstance": {
+  "@type": "CourseInstance",
+  "courseMode": "online",
+  "courseWorkload": "PT10H"
+ }
+}
+</script>
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+<div class="wrap">
+<article>
+<h1>Курс «Архитектура мессенджера»</h1>
+<p class="sub">Бесплатный курс по архитектуре мессенджера: 26 разделов о постоянных соединениях, доставке сообщений, шардировании, E2EE и звонках. Подготовка к System Design собеседованиям. Текстовая версия — для чтения и поиска; тот же материал доступен в <a href="../trainer.html">интерактивном тренажёре</a> с тестами, флеш-карточками и сборкой схемы.</p>
+<section>
+<h2>Часть 1 · Картина целиком</h2>
+<p class="pintro">Фундамент: чем мессенджер архитектурно отличается от обычного «запрос — ответ», как очертить требования и рамки задачи и какие API торчат наружу. На эту картину опирается всё остальное.</p>
+<ul class="toc">
+<li><a href="razdel-1.html">Раздел 1. Что такое мессенджер с точки зрения архитектуры</a><span class="tsub">Чем мессенджер отличается от обычного веб-сервиса; почему нужны постоянные соединения, а не модель «запрос — ответ»; ключевые сущности (пользователь, устройство, чат, сообщение); знакомство с главным тренажёром.</span></li>
+<li><a href="razdel-2.html">Раздел 2. Требования и рамки задачи</a><span class="tsub">Функциональные требования (диалоги, группы, статусы, медиа); нефункциональные (масштаб, задержка, доступность, консистентность); прикидка нагрузки (DAU, сообщений в секунду, объём хранилища); как сужать scope прямо на интервью.</span></li>
+<li><a href="razdel-2a.html">Раздел 2A. API-ручки (эндпоинты)</a><span class="tsub">Что такое ручка-эндпоинт; как вывести API из требований; HTTP против WebSocket по направлению.</span></li>
+</ul>
+</section>
+<section>
+<h2>Часть 2 · Соединение и доставка</h2>
+<p class="pintro">Сердце курса. Как клиент держит постоянное соединение, какой путь проходит сообщение онлайн и офлайн, чем очередь отличается от лога, и как устроены гарантии доставки, порядок и статусы «доставлено / прочитано».</p>
+<ul class="toc">
+<li><a href="razdel-3.html">Раздел 3. Как клиент держит связь с сервером</a><span class="tsub">Постоянное соединение (WebSocket / long-lived TCP) против polling; gateway- и connection-серверы; как сервер понимает, к какому узлу подключён получатель.</span></li>
+<li><a href="razdel-3a.html">Раздел 3A. Протоколы — TCP, UDP, HTTP, WebSocket, WebRTC, CDN</a><span class="tsub">TCP/UDP, HTTP/WebSocket, WebRTC и CDN: что поверх чего и зачем в мессенджере.</span></li>
+<li><a href="razdel-4.html">Раздел 4. Путь сообщения онлайн-доставка</a><span class="tsub">Полный путь от отправителя к получателю, когда оба онлайн; роль message-сервиса и маршрутизации; подтверждения sent / delivered / read.</span></li>
+<li><a href="razdel-5.html">Раздел 5. Офлайн-доставка и пуши</a><span class="tsub">Очередь недоставленных сообщений; что происходит при переподключении; push-уведомления (APNs/FCM) и зачем они нужны поверх собственного соединения.</span></li>
+<li><a href="razdel-6.html">Раздел 6. Гарантии доставки и порядок</a><span class="tsub">At-least-once против exactly-once на практике; идемпотентность и дедупликация по messageid; упорядочивание сообщений; откуда берутся повторы.</span></li>
+<li><a href="razdel-6a.html">Раздел 6A. Очередь против лога — Kafka, Cassandra и догон по курсору</a><span class="tsub">Транзиентная очередь (Kafka) против durable-лога (Cassandra); запись всегда идёт в лог; курсор клиента решает, откуда читать пропущенное.</span></li>
+<li><a href="razdel-7.html">Раздел 7. Статусы присутствия и индикаторы</a><span class="tsub">Онлайн/офлайн, «был(а) в сети», «печатает…»; почему presence дорого масштабировать; что хранить, а что считать эфемерным.</span></li>
+</ul>
+</section>
+<section>
+<h2>Часть 3 · Хранение и данные</h2>
+<p class="pintro">Где сообщения живут: шардированная база и схемы таблиц, медиа через объектное хранилище и CDN, синхронизация истории между несколькими устройствами по курсору.</p>
+<ul class="toc">
+<li><a href="razdel-8.html">Раздел 8. Где живут сообщения и как шардируются</a><span class="tsub">Выбор БД; шардирование и по какому ключу (chatid против userid); durability и репликация; что значит «сообщение не потеряется».</span></li>
+<li><a href="razdel-8a.html">Раздел 8A. Модель данных (схемы таблиц)</a><span class="tsub">Сущности и таблицы; ключ шардирования; SQL и NoSQL; связь модели данных с ручками.</span></li>
+<li><a href="razdel-9.html">Раздел 9. Медиа и CDN</a><span class="tsub">Чем загрузка фото/видео отличается от текста; объектное хранилище; CDN, превью и транскодинг; почему в сообщении лежит ссылка, а не само «тело».</span></li>
+<li><a href="razdel-10.html">Раздел 10. Несколько устройств и синхронизация истории</a><span class="tsub">Один аккаунт — много устройств; синхронизация истории; новое устройство и догрузка чатов; конфликты и «источник правды».</span></li>
+</ul>
+</section>
+<section>
+<h2>Часть 4 · Масштаб: группы, каналы, регионы</h2>
+<p class="pintro">Что ломается при росте: группы и каналы с fan-out, балансировщики и шлюзы на входе, геораспределение и доступность при падении дата-центра.</p>
+<ul class="toc">
+<li><a href="razdel-11.html">Раздел 11. Группы и фан-аут</a><span class="tsub">Fan-out on write против fan-out on read; маленькие группы против огромных каналов; почему рассылка на миллион — отдельная задача.</span></li>
+<li><a href="razdel-12.html">Раздел 12. Балансировка, шлюзы и маршрутизация соединений</a><span class="tsub">Как раскидывать миллионы соединений; балансировщики и connection-серверы; реестр сессий (кто где подключён); деградация и переподключения.</span></li>
+<li><a href="razdel-13.html">Раздел 13. Геораспределение и доступность</a><span class="tsub">Несколько дата-центров; близость к пользователю и задержка; репликация между регионами; trade-off консистентности и доступности при отказах.</span></li>
+</ul>
+</section>
+<section>
+<h2>Часть 5 · Протоколы безопасности</h2>
+<p class="pintro">От TLS к сквозному шифрованию: Signal Protocol, X3DH и Double Ratchet, групповое E2EE, подход Telegram (MTProto), и честный разговор о том, чего E2EE не закрывает — метаданные, бэкапы, регуляторика.</p>
+<ul class="toc">
+<li><a href="razdel-14.html">Раздел 14. Транспортное против сквозного шифрования</a><span class="tsub">TLS «клиент — сервер» против end-to-end; что видит сервер в каждом случае; модель угроз — кто от кого защищается.</span></li>
+<li><a href="razdel-15.html">Раздел 15. Signal Protocol, X3DH и установка ключей из названия</a><span class="tsub">Как два устройства договариваются об общем ключе, не будучи онлайн одновременно; prekeys и сервер ключей; зачем это асинхронному мессенджеру — без тяжёлой математики.</span></li>
+<li><a href="razdel-16.html">Раздел 16. Double Ratchet и forward secrecy</a><span class="tsub">Смена ключа на каждое сообщение; forward secrecy и post-compromise security простыми словами; почему утечка одного ключа не раскрывает всю переписку.</span></li>
+<li><a href="razdel-17.html">Раздел 17. MTProto и подход Telegram</a><span class="tsub">Чем отличается подход Telegram; облачные чаты против секретных; где E2EE есть, а где нет, и какие у этого продуктовые последствия.</span></li>
+<li><a href="razdel-18.html">Раздел 18. Групповое E2EE</a><span class="tsub">Почему шифровать группу сложнее, чем диалог; подход sender keys и идея MLS; что происходит с ключами при добавлении и удалении участника.</span></li>
+<li><a href="razdel-19.html">Раздел 19. Чего E2EE НЕ закрывает, метаданные и бэкапы</a><span class="tsub">Метаданные (кто, кому, когда, как часто) видны даже при E2EE; облачные бэкапы как «дыра» в защите; устройство как слабое звено.</span></li>
+<li><a href="razdel-20.html">Раздел 20. Регуляторный и продуктовый угол безопасности</a><span class="tsub">Давление регуляторов (доступ к данным, локализация, «бэкдоры»); приватность как продуктовое позиционирование; компромиссы, которые защищает продакт.</span></li>
+</ul>
+</section>
+<section>
+<h2>Часть 6 · Звонки и реальное время</h2>
+<p class="pintro">Реальное время поверх всего: как устроен медиапоток звонка, зачем STUN/TURN и SFU, и как шифруются групповые звонки.</p>
+<ul class="toc">
+<li><a href="razdel-21.html">Раздел 21. Голосовые и видеозвонки как устроен поток</a><span class="tsub">Чем звонок отличается от сообщений; STUN/TURN, WebRTC и почему UDP.</span></li>
+<li><a href="razdel-22.html">Раздел 22. Групповые звонки и шифрование</a><span class="tsub">Mesh против SFU/MCU; групповое видео; E2EE в звонке.</span></li>
+</ul>
+</section>
+<section>
+<h2>Справка по сетям</h2>
+<ul class="toc">
+<li><a href="spravka-websocket.html">WebSocket</a></li>
+<li><a href="spravka-tcp.html">TCP (Transmission Control Protocol)</a></li>
+<li><a href="spravka-sokety.html">Сокеты (Sockets)</a></li>
+<li><a href="spravka-setevye-urovni.html">Сетевые уровни (L4, L7 и другие) простыми словами</a></li>
+</ul>
+</section>
+</article>
+<footer class="foot"><a href="https://chernoyarova.github.io/messenger_architecture/">Перейти в интерактивный тренажёр →</a></footer>
+</div>
+</body>
+</html>

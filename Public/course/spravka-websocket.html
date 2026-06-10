@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Справочный материал курса по архитектуре мессенджера: WebSocket.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://chernoyarova.github.io/messenger_architecture/Public/course/spravka-websocket.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="WebSocket — справка курса «Архитектура мессенджера»">
+<meta property="og:description" content="Справочный материал курса по архитектуре мессенджера: WebSocket.">
+<meta property="og:url" content="https://chernoyarova.github.io/messenger_architecture/Public/course/spravka-websocket.html">
+<meta property="og:locale" content="ru_RU">
+<title>WebSocket — справка курса «Архитектура мессенджера»</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "TechArticle",
+ "headline": "WebSocket",
+ "description": "Справочный материал курса по архитектуре мессенджера: WebSocket.",
+ "inLanguage": "ru",
+ "url": "https://chernoyarova.github.io/messenger_architecture/Public/course/spravka-websocket.html",
+ "isPartOf": {
+  "@type": "Course",
+  "name": "Архитектура мессенджера",
+  "url": "https://chernoyarova.github.io/messenger_architecture/Public/course/"
+ }
+}
+</script>
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+<div class="wrap">
+<header class="crumbs">
+  <a href="index.html">Курс «Архитектура мессенджера»</a> · <span>Справка по сетям</span>
+</header>
+<article>
+<h1>WebSocket</h1>
+<p class="sub">Справочный материал курса по архитектуре мессенджера: WebSocket.</p>
+<div class="md">
+<h3>Что такое WebSocket простыми словами?</h3>
+<p><strong>WebSocket</strong> — это технология, которая позволяет браузеру (клиенту) и серверу общаться друг с другом в реальном времени по <strong>постоянному</strong> каналу связи.</p>
+<h4>💡 Аналогия из жизни</h4>
+<p>Чтобы понять разницу между обычным интернетом и WebSocket, представим два способа общения:</p>
+<ol>
+<li><strong>Обычный HTTP (как в старом интернете)</strong> — это как <strong>переписка бумажными письмами</strong>. Вы хотите узнать, есть ли новые данные? Пишете письмо на сервер: <em>&quot;Есть что-то новое?&quot;</em>. Сервер отвечает: <em>&quot;Нет&quot;</em>. Связь обрывается. Через минуту вы снова пишете: <em>&quot;А теперь?&quot;</em>. Это называется <em>опрос (polling)</em>. Это медленно, неудобно и тратит много ресурсов.</li>
+<li><strong>WebSocket</strong> — это как <strong>телефонный звонок</strong>. Вы один раз звоните (устанавливаете соединение), и пока вы не положите трубку, вы и собеседник можете говорить в любой момент, перебивать друг друга и слушать. Связь не обрывается после каждого слова.</li>
+</ol>
+<hr>
+<h3>️ Разбор схемы</h3>
+<p>На изображении выше отлично показана эта разница:</p>
+<ul>
+<li><strong>Слева (HTTP Polling)</strong>: Клиент постоянно отправляет запросы (Request), сервер отвечает, и соединение сразу закрывается (Connection Closed). Чтобы получить новые данные, нужно создавать соединение заново.</li>
+<li><strong>Справа (WebSocket)</strong>: Сначала происходит одно &quot;рукопожатие&quot; (Handshake) — установка связи. После этого между клиентом и сервером образуется постоянный &quot;туннель&quot; (Real-time, Persistent Connection), по которому данные летят в обе стороны одновременно без задержек.</li>
+</ul>
+<hr>
+<h3>⚙️ Как это работает под капотом?</h3>
+<ol>
+<li><strong>Рукопожатие (Handshake)</strong>: Клиент отправляет обычный HTTP-запрос, но с особым заголовком: <em>&quot;Привет, давай перейдем на WebSocket?&quot;</em>.</li>
+<li><strong>Апгрейд</strong>: Сервер отвечает: <em>&quot;Ок, давай!&quot;</em>. Протокол переключается с HTTP на WebSocket.</li>
+<li><strong>Full-duplex (Дуплексная связь)</strong>: Теперь и клиент, и сервер могут отправлять сообщения друг другу в любой момент, не дожидаясь запроса.</li>
+</ol>
+<hr>
+<h3>💻 Примеры кода</h3>
+<p>Вот как просто это выглядит на практике.</p>
+<p><strong>Клиент (JavaScript прямо в браузере):</strong></p>
+<pre><code class="language-javascript">// 1. Открываем соединение с сервером
+const socket = new WebSocket(&#39;wss://echo.websocket.org&#39;);
+
+// 2. Когда соединение открыто
+socket.onopen = function() {
+  console.log(&quot;Связь установлена!&quot;);
+  socket.send(&quot;Привет, сервер!&quot;); // Отправляем сообщение
+};
+
+// 3. Когда получаем сообщение от сервера (в любой момент!)
+socket.onmessage = function(event) {
+  console.log(&quot;Получено от сервера:&quot;, event.data);
+};
+
+// 4. Если связь оборвалась
+socket.onclose = function() {
+  console.log(&quot;Соединение закрыто&quot;);
+};
+</code></pre>
+<p><strong>Сервер (Node.js с популярной библиотекой <code>ws</code>):</strong></p>
+<pre><code class="language-javascript">const WebSocket = require(&#39;ws&#39;);
+const wss = new WebSocket.Server({ port: 8080 });
+
+wss.on(&#39;connection&#39;, function connection(ws) {
+  console.log(&#39;Клиент подключился!&#39;);
+
+  // Когда получаем сообщение от клиента
+  ws.on(&#39;message&#39;, function incoming(message) {
+    console.log(&#39;Получено: %s&#39;, message);
+    
+    // Отправляем ответ обратно клиенту
+    ws.send(&#39;Привет, клиент! Я получил твое сообщение.&#39;);
+  });
+});
+</code></pre>
+<hr>
+<h3>🚀 Где это используется?</h3>
+<p>WebSocket незаменим там, где важна скорость и мгновенная доставка данных:</p>
+<ul>
+<li>💬 <strong>Мессенджеры и чаты</strong> (Telegram Web, Slack, Discord) — сообщения прилетают мгновенно, без необходимости обновлять страницу.</li>
+<li>📈 <strong>Финансовые графики и биржи</strong> — котировки акций и криптовалют обновляются каждую секунду.</li>
+<li><strong>Онлайн-игры</strong> — координаты игроков и действия передаются в реальном времени.</li>
+<li>🔔 <strong>Уведомления</strong> — когда вам приходит пуш-уведомление или &quot;лайк&quot; на сайте, скорее всего, это работает через WebSocket.</li>
+<li><strong>Совместное редактирование</strong> (Google Docs, Figma) — вы видите, как курсор другого человека двигается в реальном времени.</li>
+</ul>
+<h3>🎯 Короткий итог</h3>
+<p>WebSocket нужен тогда, когда серверу нужно самому &quot;толкнуть&quot; (push) данные клиенту, или когда данные обновляются очень часто. Он экономит трафик, снижает задержки (пинг) и делает веб-приложения по-настоящему живыми.</p>
+<p><strong>Основные:</strong> #WebSocket #HTTP #WebDev #Программирование #JavaScript #NodeJS #Сети #RealTime #Backend #Frontend</p>
+
+</div>
+</article>
+<nav class="pn">
+<a class="prev" href="razdel-22.html">← Раздел 22. Групповые звонки и шифрование</a>
+<a class="next" href="spravka-tcp.html">TCP (Transmission Control Protocol) →</a>
+</nav>
+<footer class="foot">
+  <a href="../trainer.html#course/ref/WebSocket">Открыть этот раздел в интерактивном тренажёре →</a><br>
+  <a href="index.html">Оглавление курса</a> · <a href="https://chernoyarova.github.io/messenger_architecture/">Тренажёр: карта, флеш-карточки, сборка схемы</a>
+</footer>
+</div>
+</body>
+</html>

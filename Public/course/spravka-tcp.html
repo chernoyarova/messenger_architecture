@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Справочный материал курса по архитектуре мессенджера: TCP (Transmission Control Protocol).">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://chernoyarova.github.io/messenger_architecture/Public/course/spravka-tcp.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="TCP (Transmission Control Protocol) — справка курса «Архитектура мессенджера»">
+<meta property="og:description" content="Справочный материал курса по архитектуре мессенджера: TCP (Transmission Control Protocol).">
+<meta property="og:url" content="https://chernoyarova.github.io/messenger_architecture/Public/course/spravka-tcp.html">
+<meta property="og:locale" content="ru_RU">
+<title>TCP (Transmission Control Protocol) — справка курса «Архитектура мессенджера»</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "TechArticle",
+ "headline": "TCP (Transmission Control Protocol)",
+ "description": "Справочный материал курса по архитектуре мессенджера: TCP (Transmission Control Protocol).",
+ "inLanguage": "ru",
+ "url": "https://chernoyarova.github.io/messenger_architecture/Public/course/spravka-tcp.html",
+ "isPartOf": {
+  "@type": "Course",
+  "name": "Архитектура мессенджера",
+  "url": "https://chernoyarova.github.io/messenger_architecture/Public/course/"
+ }
+}
+</script>
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+<div class="wrap">
+<header class="crumbs">
+  <a href="index.html">Курс «Архитектура мессенджера»</a> · <span>Справка по сетям</span>
+</header>
+<article>
+<h1>TCP (Transmission Control Protocol)</h1>
+<p class="sub">Справочный материал курса по архитектуре мессенджера: TCP (Transmission Control Protocol).</p>
+<div class="md">
+<p><strong>Краткое определение:</strong> Протокол управления передачей, который гарантирует надежную, упорядоченную и проверенную на ошибки доставку данных между устройствами в сети.</p>
+<h2>🧠 Простыми словами</h2>
+<p>Представь, что ты отправляешь другу важную рукопись книги, но почта принимает только маленькие конверты. Ты разрываешь книгу на страницы, кладешь каждую в отдельный конверт и <strong>нумеруешь</strong> их. </p>
+<p>Но это еще не всё. Ты отправляешь их <strong>заказным письмом с уведомлением о вручении</strong>. </p>
+<ul>
+<li>Если друг получает конверт №5, он отправляет тебе смс: «Конверт №5 получил!».</li>
+<li>Если через некоторое время ты понимаешь, что смс о конверте №3 не приходило, ты отправляешь его <strong>заново</strong>.</li>
+<li>Когда друг соберет все конверты, он сложит страницы строго по номерам, и книга будет целой.</li>
+</ul>
+<p>Именно так работает <strong>TCP</strong>. Он разбивает данные на пакеты, нумерует их, следит за доставкой и просит повторить отправку, если что-то потерялось.</p>
+<h2>⚙️ Как это работает (по шагам)</h2>
+<ol>
+<li><strong>Установка соединения (Three-way handshake / Тройное рукопожатие):</strong> Прежде чем передать данные, устройства «знакомятся».<ul>
+<li>Клиент: «Привет, я хочу отправить данные, ты готов?» <em>(SYN)</em></li>
+<li>Сервер: «Да, я готов, а ты?» <em>(SYN-ACK)</em></li>
+<li>Клиент: «Отлично, я тоже готов, начинаем!» <em>(ACK)</em></li>
+</ul>
+</li>
+<li><strong>Передача данных:</strong> Данные разбиваются на пакеты. Каждый пакет имеет номер последовательности.</li>
+<li><strong>Подтверждение (Acknowledgment):</strong> Получатель отправляет обратно подтверждение о получении каждого пакета. Если подтверждение не пришло, отправитель повторяет передачу этого пакета.</li>
+<li><strong>Завершение соединения:</strong> Когда передача закончена, устройства корректно «прощаются» и закрывают канал связи.</li>
+</ol>
+<h2>💡 Ключевые особенности для разработчика</h2>
+<ul>
+<li><strong>Надежность:</strong> Данные дойдут до адресата или ты узнаешь об ошибке. Потеря пакетов в сети не означает потерю информации.</li>
+<li><strong>Упорядоченность:</strong> Даже если пакеты пришли по сети вразнобой (например, пакет №3 пришел раньше пакета №1), TCP на стороне получателя сам соберет их в правильном порядке.</li>
+<li><strong>Контроль перегрузок:</strong> TCP умеет «притормаживать» отправку, если замечает, что сеть перегружена, чтобы не «уронить» её полностью.</li>
+</ul>
+<h2>🆚 TCP против UDP (для контекста)</h2>
+<p>Часто TCP сравнивают с <strong>UDP</strong> (User Datagram Protocol):</p>
+<ul>
+<li><strong>TCP</strong> — это заказное письмо с уведомлением или телефонный звонок. Надежно, есть подтверждение, но чуть медленнее из-за всех этих проверок. <em>(Используется для: загрузки веб-страниц (HTTP/HTTPS), отправки email, передачи файлов).</em></li>
+<li><strong>UDP</strong> — это обычная почтовая открытка или крик в толпу. Отправил и забыл. Быстро, но нет гарантий, что дойдет и что дойдет в правильном порядке. <em>(Используется для: онлайн-игр, видеостриминга, VoIP-звонков, где важна скорость, а пара потерянных кадров не критична).</em></li>
+</ul>
+<h2>🔗 Связанные понятия (для Obsidian)</h2>
+<ul>
+<li>[[IP (Internet Protocol)]]</li>
+<li>[[Модель OSI]]</li>
+<li>[[UDP]]</li>
+<li>[[Three-way handshake]]</li>
+<li>[[Сетевые протоколы]]</li>
+<li>[[HTTP]]</li>
+</ul>
+<p>#разработка #сети #базовые_понятия #TCP #обучение #backend</p>
+
+</div>
+</article>
+<nav class="pn">
+<a class="prev" href="spravka-websocket.html">← WebSocket</a>
+<a class="next" href="spravka-sokety.html">Сокеты (Sockets) →</a>
+</nav>
+<footer class="foot">
+  <a href="../trainer.html#course/ref/TCP%20(Transmission%20Control%20Protocol)">Открыть этот раздел в интерактивном тренажёре →</a><br>
+  <a href="index.html">Оглавление курса</a> · <a href="https://chernoyarova.github.io/messenger_architecture/">Тренажёр: карта, флеш-карточки, сборка схемы</a>
+</footer>
+</div>
+</body>
+</html>

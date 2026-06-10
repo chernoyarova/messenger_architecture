@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Сущности и таблицы; ключ шардирования; SQL и NoSQL; связь модели данных с ручками.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://chernoyarova.github.io/messenger_architecture/Public/course/razdel-8a.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Раздел 8A. Модель данных (схемы таблиц) — Архитектура мессенджера">
+<meta property="og:description" content="Сущности и таблицы; ключ шардирования; SQL и NoSQL; связь модели данных с ручками.">
+<meta property="og:url" content="https://chernoyarova.github.io/messenger_architecture/Public/course/razdel-8a.html">
+<meta property="og:locale" content="ru_RU">
+<title>Раздел 8A. Модель данных (схемы таблиц) — Архитектура мессенджера</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "TechArticle",
+ "headline": "Раздел 8A. Модель данных (схемы таблиц)",
+ "description": "Сущности и таблицы; ключ шардирования; SQL и NoSQL; связь модели данных с ручками.",
+ "inLanguage": "ru",
+ "url": "https://chernoyarova.github.io/messenger_architecture/Public/course/razdel-8a.html",
+ "isPartOf": {
+  "@type": "Course",
+  "name": "Архитектура мессенджера",
+  "url": "https://chernoyarova.github.io/messenger_architecture/Public/course/"
+ }
+}
+</script>
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+<div class="wrap">
+<header class="crumbs">
+  <a href="index.html">Курс «Архитектура мессенджера»</a> · <span>Часть 3 · Хранение и данные</span>
+</header>
+<article>
+<h1>Раздел 8A. Модель данных (схемы таблиц)</h1>
+<p class="sub">Сущности и таблицы; ключ шардирования; SQL и NoSQL; связь модели данных с ручками.</p>
+<div class="md">
+<p>API-ручки (Раздел 2A) и хранение (Раздел 8) опираются на <strong>модель данных</strong>. Набросать сущности и ключ шардирования — частый вопрос интервьюера: «какие таблицы заведёшь и по какому ключу шардируешь?».</p>
+<h2>Главные сущности</h2>
+<pre><code>users(user_id PK, имя, профиль, …)                       аккаунт
+devices(device_id PK, user_id FK, platform, push_token, last_seen)
+                                                          устройств у юзера много
+chats(chat_id PK, type[dialog|group|channel], title, created_at)
+chat_members(chat_id, user_id, role, muted, joined_at)   членство · PK (chat_id, user_id)
+messages(message_id, chat_id, sender_id, seq, type,
+         body/ciphertext, created_at, edited_at, deleted) durable-лог
+attachments(file_id PK, message_id, url, type, size, preview)
+read_cursors(chat_id, user_id, device_id, last_read_seq)  прочитанность на устройство
+prekeys(user_id, key_id, pubkey)                          для E2EE (Раздел 15)
+</code></pre>
+<h2>Ключевые решения (их и спрашивают)</h2>
+<ul>
+<li><strong><code>messages</code> шардируем по <code>chat_id</code>.</strong> Все сообщения чата лежат на одном шарде, и главный запрос — «последние N сообщений чата» — бьёт в один шард. Минус: горячий шард на чатах-гигантах и каналах — лечится особой обработкой больших каналов (Раздел 11).</li>
+<li><strong>Порядок — через <code>seq</code></strong>, монотонный в рамках чата. Сортировка по нему, а не по времени (часы серверов расходятся). Разрыв в <code>seq</code> = обнаруженный пропуск (Раздел 6).</li>
+<li><strong>Членство ≠ история.</strong> <code>chat_members</code> и <code>messages</code> — разные таблицы с разной нагрузкой: fan-out читает список участников, история — это бесконечный append. Это и есть «Метаданные чата» на схеме (Раздел 11).</li>
+<li><strong>Прочитанность — курсор на устройство.</strong> <code>last_read_seq</code> свой для каждой пары (чат, устройство): телефон и десктоп догоняют независимо (Раздел 10). Сервер — источник правды.</li>
+<li><strong>Медиа — ссылкой, не блобом.</strong> Файл лежит в объектном хранилище + CDN, в <code>attachments</code>/<code>messages</code> — только URL, тип, размер, превью (Раздел 9). Блоб в таблице сообщений убил бы и её, и тракт доставки.</li>
+<li><strong>SQL и NoSQL вместе.</strong> История сообщений — NoSQL-стиль (поток записей, бесконечный рост, горизонтальное шардирование). Аккаунты, контакты, членство — SQL, где важны строгие связи и согласованность (Раздел 8).</li>
+</ul>
+<h2>Как это связано с ручками</h2>
+<p>Каждая ручка из Раздела 2A читает/пишет эти таблицы: <code>GET /messages/{chat_id}</code> идёт постранично из <code>messages</code> по <code>(chat_id, seq)</code>; <code>POST /chats/{id}/members</code> — строка в <code>chat_members</code>; <code>POST /media</code> — запись в <code>attachments</code> плюс файл в хранилище. Модель данных — это «обратная сторона» API.</p>
+
+</div>
+</article>
+<nav class="pn">
+<a class="prev" href="razdel-8.html">← Раздел 8. Где живут сообщения и как шардируются</a>
+<a class="next" href="razdel-9.html">Раздел 9. Медиа и CDN →</a>
+</nav>
+<footer class="foot">
+  <a href="../trainer.html#course/8A">Открыть этот раздел в интерактивном тренажёре →</a><br>
+  <a href="index.html">Оглавление курса</a> · <a href="https://chernoyarova.github.io/messenger_architecture/">Тренажёр: карта, флеш-карточки, сборка схемы</a>
+</footer>
+</div>
+</body>
+</html>

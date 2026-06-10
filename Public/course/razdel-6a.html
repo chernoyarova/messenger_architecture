@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Транзиентная очередь (Kafka) против durable-лога (Cassandra); запись всегда идёт в лог; курсор клиента решает, откуда читать пропущенное.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://chernoyarova.github.io/messenger_architecture/Public/course/razdel-6a.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Раздел 6A. Очередь против лога — Kafka, Cassandra и догон по курсору — Архитектура мессенджера">
+<meta property="og:description" content="Транзиентная очередь (Kafka) против durable-лога (Cassandra); запись всегда идёт в лог; курсор клиента решает, откуда читать пропущенное.">
+<meta property="og:url" content="https://chernoyarova.github.io/messenger_architecture/Public/course/razdel-6a.html">
+<meta property="og:locale" content="ru_RU">
+<title>Раздел 6A. Очередь против лога — Kafka, Cassandra и догон по курсору — Архитектура мессенджера</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "TechArticle",
+ "headline": "Раздел 6A. Очередь против лога — Kafka, Cassandra и догон по курсору",
+ "description": "Транзиентная очередь (Kafka) против durable-лога (Cassandra); запись всегда идёт в лог; курсор клиента решает, откуда читать пропущенное.",
+ "inLanguage": "ru",
+ "url": "https://chernoyarova.github.io/messenger_architecture/Public/course/razdel-6a.html",
+ "isPartOf": {
+  "@type": "Course",
+  "name": "Архитектура мессенджера",
+  "url": "https://chernoyarova.github.io/messenger_architecture/Public/course/"
+ }
+}
+</script>
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+<div class="wrap">
+<header class="crumbs">
+  <a href="index.html">Курс «Архитектура мессенджера»</a> · <span>Часть 2 · Соединение и доставка</span>
+</header>
+<article>
+<h1>Раздел 6A. Очередь против лога — Kafka, Cassandra и догон по курсору</h1>
+<p class="sub">Транзиентная очередь (Kafka) против durable-лога (Cassandra); запись всегда идёт в лог; курсор клиента решает, откуда читать пропущенное.</p>
+<div class="md">
+<p>Раздел 6 объяснил, как сообщение <strong>не теряется</strong> и приходит <strong>по порядку</strong>. Но остался вопрос на стыке: где сообщение физически ждёт, пока получатель офлайн, и откуда его потом достают, когда он вернулся? Тут работают <strong>два разных хранилища</strong>, и путать их роли — классическая ошибка на интервью.</p>
+<hr>
+<h2>Два хранилища, две роли</h2>
+<p><strong>Очередь (Kafka) — транзиентный буфер</strong></p>
+<ul>
+<li><em>Транзиентный</em> = временный, «полежало и исчезло».</li>
+<li>Хранит сообщения <strong>ограниченное время</strong> (дни — настраивается), потом удаляет.</li>
+<li>Это <strong>труба</strong> для свежего, а не склад.</li>
+<li>📦 Аналогия: <strong>лента выдачи багажа</strong> — чемоданы едут, но не забрал — через время их снимут.</li>
+</ul>
+<p><strong>Лог (Cassandra) — durable-архив</strong></p>
+<ul>
+<li><em>Durable</em> = надёжный, «легло навсегда».</li>
+<li>Хранит <strong>всю историю</strong> — это <strong>источник правды</strong>.</li>
+<li>📦 Аналогия: <strong>камера хранения</strong> — лежит сколько надо, по твоему номеру всегда найдут.</li>
+</ul>
+<blockquote>
+<p>💡 <strong>Транзиентный = на время. Durable = навсегда.</strong> Если услышала «транзиентный» — мысленно подставь «временный».</p>
+</blockquote>
+<hr>
+<h2>Правило записи: лог получает всё и всегда</h2>
+<pre><code>Алиса отправила сообщение
+        ↓
+1. ВСЕГДА → Cassandra (durable-лог)   ← святое, источник правды
+        ↓
+2. Боб офлайн? → ДОПОЛНИТЕЛЬНО в очередь Kafka + пуш, чтобы разбудить
+   Боб онлайн? → сразу толкаем ему, очередь не нужна
+</code></pre>
+<p>📌 Cassandra получает <strong>всё и всегда</strong>. Kafka — только как временный буфер для офлайна. Поэтому полная история гарантированно есть в логе, а в очереди — лишь «свежак для тех, кто ещё не забрал».</p>
+<hr>
+<h2>Правило чтения: курсор решает, откуда брать</h2>
+<p>Решает <strong>клиент</strong> при переподключении — он присылает свой <strong>курсор</strong> «докуда я уже видел»:</p>
+<pre><code>Боб вернулся → &quot;я видел до seq 4012, что дальше?&quot;
+        ↓
+Нужное (4013+) ещё лежит в Kafka?
+        ↓
+   ┌────┴───────────────────┐
+   ↓ ДА                      ↓ НЕТ
+(короткий разрыв,          (долго офлайн / новое устройство /
+свежак под рукой)           старое уже протухло в Kafka)
+   ↓                         ↓
+отдаём из очереди,         Sync-сервис дочитывает из Cassandra
+быстро ✅                   по курсору: &quot;всё после 4012&quot; ✅
+</code></pre>
+<p>Критерий простой: <strong>есть ли нужное ещё в Kafka?</strong> Есть → берём оттуда (быстро). Нет → идём в Cassandra (надёжно).</p>
+<hr>
+<h2>Почему догон читают из Cassandra, а не из Kafka</h2>
+<p><strong>1. Kafka хранит недолго.</strong> Боб офлайн месяц → в очереди уже пусто, всё протухло. В логе — лежит.</p>
+<p><strong>2. Новому устройству нужна вся история.</strong> В Kafka её давно нет, Cassandra отдаёт хоть с первого сообщения.</p>
+<p><strong>3. Kafka — лента «по порядку», а догон — точечный запрос.</strong> «Дай чат №555 начиная с seq 4012» — это родной запрос Cassandra (она шардирована по <code>chat_id</code>), а Kafka заставила бы листать всю ленту.</p>
+<p><strong>4. У каждого устройства свой курсор.</strong> Телефон видел до 4012, десктоп — до 3500. Каждому нужен свой произвольный диапазон, повторно. Лента Kafka для этого не годится, а из лога читай что угодно сколько угодно раз.</p>
+<hr>
+<h2>Зачем тогда вообще Kafka, если есть Cassandra</h2>
+<p>Разделение ролей под разную нагрузку:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Очередь (Kafka)</th>
+<th>Лог (Cassandra)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Роль</td>
+<td>быстро толкнуть «есть новое», разбудить</td>
+<td>вечный источник правды</td>
+</tr>
+<tr>
+<td>Срок хранения</td>
+<td>дни (транзиентно)</td>
+<td>всегда (durable)</td>
+</tr>
+<tr>
+<td>Тип запроса</td>
+<td>поток по порядку</td>
+<td>точечно: чат + диапазон</td>
+</tr>
+<tr>
+<td>Кто читает</td>
+<td>живая доставка онлайн</td>
+<td>Sync при догоне</td>
+</tr>
+</tbody></table>
+<pre><code>Короткий разрыв (метро)  → быстро из Kafka (свежак под рукой)
+Долгий офлайн / новый телефон → надёжно из Cassandra через Sync
+</code></pre>
+<blockquote>
+<p>💡 <strong>Cassandra — дефолт и страховка</strong> (там есть всё). <strong>Kafka — ускорение</strong> для частого случая, чтобы не дёргать архив по пустякам.</p>
+</blockquote>
+<hr>
+<h2>Главное, что сказать на собеседовании</h2>
+<ol>
+<li><strong>Запись всегда идёт в durable-лог (Cassandra)</strong> — источник правды. В очередь Kafka — дополнительно, если получатель офлайн.</li>
+<li><strong>Очередь транзиентна</strong> — буфер на дни, не вечное хранилище.</li>
+<li><strong>Курсор клиента решает, откуда читать:</strong> свежее ещё в Kafka — оттуда; протухло или новое устройство — догон из Cassandra через Sync.</li>
+<li><strong>Почему не всё из Kafka:</strong> долгий офлайн и новые устройства, плюс Kafka — лента, а догон — точечный запрос по чату и диапазону.</li>
+<li><strong>Почему не всё из Cassandra напрямую:</strong> Kafka даёт быстрый сигнал «есть новое» и дешёвую доставку свежего онлайн-получателям.</li>
+</ol>
+
+</div>
+</article>
+<nav class="pn">
+<a class="prev" href="razdel-6.html">← Раздел 6. Гарантии доставки и порядок</a>
+<a class="next" href="razdel-7.html">Раздел 7. Статусы присутствия и индикаторы →</a>
+</nav>
+<footer class="foot">
+  <a href="../trainer.html#course/6A">Открыть этот раздел в интерактивном тренажёре →</a><br>
+  <a href="index.html">Оглавление курса</a> · <a href="https://chernoyarova.github.io/messenger_architecture/">Тренажёр: карта, флеш-карточки, сборка схемы</a>
+</footer>
+</div>
+</body>
+</html>

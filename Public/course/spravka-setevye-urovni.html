@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Справочный материал курса по архитектуре мессенджера: Сетевые уровни (L4, L7 и другие) простыми словами.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://chernoyarova.github.io/messenger_architecture/Public/course/spravka-setevye-urovni.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Сетевые уровни (L4, L7 и другие) простыми словами — справка курса «Архитектура мессенджера»">
+<meta property="og:description" content="Справочный материал курса по архитектуре мессенджера: Сетевые уровни (L4, L7 и другие) простыми словами.">
+<meta property="og:url" content="https://chernoyarova.github.io/messenger_architecture/Public/course/spravka-setevye-urovni.html">
+<meta property="og:locale" content="ru_RU">
+<title>Сетевые уровни (L4, L7 и другие) простыми словами — справка курса «Архитектура мессенджера»</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "TechArticle",
+ "headline": "Сетевые уровни (L4, L7 и другие) простыми словами",
+ "description": "Справочный материал курса по архитектуре мессенджера: Сетевые уровни (L4, L7 и другие) простыми словами.",
+ "inLanguage": "ru",
+ "url": "https://chernoyarova.github.io/messenger_architecture/Public/course/spravka-setevye-urovni.html",
+ "isPartOf": {
+  "@type": "Course",
+  "name": "Архитектура мессенджера",
+  "url": "https://chernoyarova.github.io/messenger_architecture/Public/course/"
+ }
+}
+</script>
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+<div class="wrap">
+<header class="crumbs">
+  <a href="index.html">Курс «Архитектура мессенджера»</a> · <span>Справка по сетям</span>
+</header>
+<article>
+<h1>Сетевые уровни (L4, L7 и другие) простыми словами</h1>
+<p class="sub">Справочный материал курса по архитектуре мессенджера: Сетевые уровни (L4, L7 и другие) простыми словами.</p>
+<div class="md">
+<h3>📚 Что такое OSI модель?</h3>
+<p><strong>OSI модель</strong> — это способ разделить сетевое общение на <strong>7 уровней</strong>, как этажи в здании. Каждый уровень отвечает за свою задачу, и верхние уровни используют услуги нижних.</p>
+<pre><code>┌─────────────────────────────────────┐
+│  L7: Application (Приложение)       │  ← HTTP, WebSocket, SMTP
+├─────────────────────────────────────┤
+│  L6: Presentation (Представление)   │  ← Шифрование, сжатие
+├─────────────────────────────────────┤
+│  L5: Session (Сессия)               │  ← Управление сессиями
+├─────────────────────────────────────┤
+│  L4: Transport (Транспорт)          │  ← TCP, UDP ⭐ ВАЖНО
+├─────────────────────────────────────┤
+│  L3: Network (Сеть)                 │  ← IP-адреса, маршрутизация
+├─────────────────────────────────────┤
+│  L2: Data Link (Канальный)          │  ← MAC-адреса, Ethernet
+├─────────────────────────────────────┤
+│  L1: Physical (Физический)          │  ← Кабели, сигналы
+└─────────────────────────────────────┘
+</code></pre>
+<p><strong>Зачем это нужно?</strong><br>Чтобы не думать обо всём сразу. Когда вы пишете HTTP-запрос, вас не волнует, как пакеты физически летят по проводам.</p>
+<hr>
+<h3>🎯 Главное: L4 vs L7</h3>
+<p>В контексте балансировщиков и сетей обычно говорят про <strong>два ключевых уровня</strong>:</p>
+<h4>🔵 <strong>L4 — Transport Layer (Транспортный уровень)</strong></h4>
+<p><strong>Что делает:</strong></p>
+<ul>
+<li>Доставляет данные от точки A до точки B</li>
+<li>Работает с <strong>TCP/UDP портами</strong></li>
+<li><strong>Не смотрит</strong>, что внутри пакета</li>
+<li>Просто пересылает байты</li>
+</ul>
+<p><strong>Аналогия:</strong><br>L4 — это <strong>курьерская служба</strong>. Курьер получает посылку, смотрит только на адрес (IP:порт) и везёт. Ему всё равно, что внутри: письмо, книга или пицца.</p>
+<p><strong>Примеры L4-балансировщиков:</strong></p>
+<ul>
+<li><strong>HAProxy</strong> (в режиме TCP)</li>
+<li><strong>Nginx</strong> (stream module)</li>
+<li><strong>AWS NLB</strong> (Network Load Balancer)</li>
+<li><strong>Linux IPVS</strong></li>
+</ul>
+<p><strong>Что видит L4-балансировщик:</strong></p>
+<pre><code>Источник: 192.168.1.100:54321
+Назначение: 10.0.0.5:443
+Протокол: TCP
+Длина: 1460 байт
+</code></pre>
+<p>Всё. Он <strong>не знает</strong>, HTTP это, WebSocket или SSH.</p>
+<hr>
+<h4>🟢 <strong>L7 — Application Layer (Прикладной уровень)</strong></h4>
+<p><strong>Что делает:</strong></p>
+<ul>
+<li>Понимает <strong>содержимое</strong> сообщений</li>
+<li>Работает с <strong>протоколами</strong>: HTTP, HTTPS, WebSocket, gRPC</li>
+<li>Может читать заголовки, URL, cookies</li>
+</ul>
+<p><strong>Аналогия:</strong><br>L7 — это <strong>почтовый сортировщик</strong>. Он вскрывает конверт, читает письмо и решает: &quot;Это спам — в корзину&quot;, &quot;Это важное — начальнику&quot;, &quot;Это реклама — в маркетинг&quot;.</p>
+<p><strong>Примеры L7-балансировщиков:</strong></p>
+<ul>
+<li><strong>HAProxy</strong> (в режиме HTTP)</li>
+<li><strong>Nginx</strong> (http module)</li>
+<li><strong>AWS ALB</strong> (Application Load Balancer)</li>
+<li><strong>Envoy</strong></li>
+<li><strong>Traefik</strong></li>
+</ul>
+<p><strong>Что видит L7-балансировщик:</strong></p>
+<pre><code class="language-http">GET /api/users HTTP/1.1
+Host: example.com
+Authorization: Bearer eyJhbGc...
+Content-Type: application/json
+</code></pre>
+<p>Он может маршрутизировать на основе:</p>
+<ul>
+<li>URL (<code>/api/*</code> → один бэкенд, <code>/static/*</code> → другой)</li>
+<li>Заголовков (<code>Authorization</code> → проверка токена)</li>
+<li>Метода (<code>POST</code> → один сервер, <code>GET</code> → другой)</li>
+</ul>
+<hr>
+<h3>📊 Сравнение L4 и L7</h3>
+<table>
+<thead>
+<tr>
+<th>Характеристика</th>
+<th>L4 (Transport)</th>
+<th>L7 (Application)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Что видит</strong></td>
+<td>IP:порт, TCP/UDP</td>
+<td>HTTP, headers, body</td>
+</tr>
+<tr>
+<td><strong>Скорость</strong></td>
+<td>⚡ Очень быстро</td>
+<td>🐢 Медленнее (нужно парсить)</td>
+</tr>
+<tr>
+<td><strong>Память на соединение</strong></td>
+<td>~2-5 KB</td>
+<td>~10-50 KB</td>
+</tr>
+<tr>
+<td><strong>CPU нагрузка</strong></td>
+<td>Низкая</td>
+<td>Выше (парсинг, TLS termination)</td>
+</tr>
+<tr>
+<td><strong>Масштабируемость</strong></td>
+<td>Миллионы соединений</td>
+<td>Сотни тысяч</td>
+</tr>
+<tr>
+<td><strong>Гибкость маршрутизации</strong></td>
+<td>Только по IP:порт</td>
+<td>По URL, headers, cookies</td>
+</tr>
+<tr>
+<td><strong>TLS termination</strong></td>
+<td>❌ Нет (прозрачный)</td>
+<td>✅ Да (расшифровывает)</td>
+</tr>
+<tr>
+<td><strong>Health checks</strong></td>
+<td>Базовые (порт открыт?)</td>
+<td>Глубокие (HTTP 200 OK?)</td>
+</tr>
+</tbody></table>
+<hr>
+<h3>🏗️ Практический пример: Мессенджер</h3>
+<pre><code>Клиенты (10 млн)
+       ↓
+┌──────────────────────────────────────┐
+│  L4 Load Balancer (HAProxy)          │
+│  • Видит только TCP соединения       │
+│  • Распределяет по Connection Servers│
+│  • Держит миллионы соединений        │
+│  • Дешевый, быстрый                  │
+└──────────────┬───────────────────────┘
+               │ (TCP stream)
+               ↓
+┌──────────────────────────────────────┐
+│  Connection Servers (WebSocket)      │
+│  • Держат WebSocket соединения       │
+│  • Парсят протокол, heartbeat        │
+└──────────────┬───────────────────────┘
+               │ (внутренние вызовы)
+               ↓
+┌──────────────────────────────────────┐
+│  L7 Load Balancer (Nginx/Envoy)      │
+│  • Для HTTP API                      │
+│  • Маршрутизирует:                   │
+│    /api/auth → Auth Service          │
+│    /api/messages → Message Service   │
+│    /api/files → File Service         │
+│  • Терминирует TLS                   │
+└──────────────────────────────────────┘
+</code></pre>
+<p><strong>Почему так?</strong></p>
+<ul>
+<li><strong>L4</strong> для WebSocket — потому что соединений очень много, а маршрутизация не нужна (все идут на один тип серверов)</li>
+<li><strong>L7</strong> для HTTP API — потому что нужно умно маршрутизировать по URL и экономить ресурсы бэкендов</li>
+</ul>
+<hr>
+<h3>🧠 Другие уровни (кратко)</h3>
+<h4><strong>L3 — Network Layer (Сетевой)</strong></h4>
+<ul>
+<li>Работает с <strong>IP-адресами</strong></li>
+<li>Маршрутизация между сетями</li>
+<li><strong>Примеры</strong>: роутеры, L3-свитчи</li>
+<li><strong>Балансировка</strong>: ECMP (Equal-Cost Multi-Path) — распределение по нескольким путям</li>
+</ul>
+<h4><strong>L2 — Data Link Layer (Канальный)</strong></h4>
+<ul>
+<li>Работает с <strong>MAC-адресами</strong></li>
+<li>Передача внутри одной сети (LAN)</li>
+<li><strong>Примеры</strong>: свитчи, VLAN</li>
+<li><strong>Балансировка</strong>: редко, но есть L2-балансировщики</li>
+</ul>
+<hr>
+<h3>💡 Почему L4 дешевле L7?</h3>
+<p><strong>L4-балансировщик:</strong></p>
+<pre><code>1. Принял TCP пакет
+2. Посмотрел: IP источника + порт
+3. Выбрал бэкенд по хешу
+4. Переслал пакет
+</code></pre>
+<p><strong>Время</strong>: микросекунды<br><strong>Память</strong>: только таблица соответствий (client_ip:port → backend_ip:port)</p>
+<p><strong>L7-балансировщик:</strong></p>
+<pre><code>1. Принял TCP пакет
+2. Собрал полный HTTP запрос (может быть несколько пакетов)
+3. Расшифровал TLS (если HTTPS)
+4. Распарсил HTTP заголовки
+5. Проанализировал URL, headers
+6. Выбрал бэкенд по правилам
+7. Возможно, модифицировал запрос (добавил X-Forwarded-For)
+8. Переслал на бэкенд
+</code></pre>
+<p><strong>Время</strong>: миллисекунды (в 10-100 раз медленнее)<br><strong>Память</strong>: буферы для сборки запросов, таблицы маршрутизации, SSL сертификаты</p>
+<hr>
+<h3>🎯 Когда что использовать?</h3>
+<table>
+<thead>
+<tr>
+<th>Сценарий</th>
+<th>Рекомендация</th>
+<th>Почему</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>WebSocket/TCP стримы</td>
+<td><strong>L4</strong></td>
+<td>Соединений много, маршрутизация не нужна</td>
+</tr>
+<tr>
+<td>HTTP API с разными путями</td>
+<td><strong>L7</strong></td>
+<td>Нужно маршрутизировать по URL</td>
+</tr>
+<tr>
+<td>Микросервисы</td>
+<td><strong>L7</strong></td>
+<td>Разные сервисы на разных путях</td>
+</tr>
+<tr>
+<td>Высокая нагрузка (C10M)</td>
+<td><strong>L4</strong></td>
+<td>Дешевле, масштабируется лучше</td>
+</tr>
+<tr>
+<td>Нужен TLS termination</td>
+<td><strong>L7</strong></td>
+<td>L4 не может расшифровать трафик</td>
+</tr>
+<tr>
+<td>Canary deploy, A/B тесты</td>
+<td><strong>L7</strong></td>
+<td>Можно маршрутизировать по headers/cookies</td>
+</tr>
+</tbody></table>
+<hr>
+<h3>🔥 Современные тренды</h3>
+<p><strong>Service Mesh (Istio, Linkerd):</strong></p>
+<ul>
+<li>Используют <strong>L7-прокси</strong> (Envoy) рядом с каждым сервисом</li>
+<li>Умная маршрутизация, observability, security</li>
+<li>Но дороже по ресурсам</li>
+</ul>
+<p><strong>eBPF (Extended Berkeley Packet Filter):</strong></p>
+<ul>
+<li>Позволяет делать <strong>L4-балансировку в ядре Linux</strong></li>
+<li>Ещё быстрее, чем пользовательские процессы</li>
+<li>Используется в Cilium, Cloudflare</li>
+</ul>
+<hr>
+<h3>📝 Итог</h3>
+<ul>
+<li><strong>L4</strong> = &quot;тупой&quot; транспорт. Быстрый, дешевый, держит миллионы соединений. Не знает, что внутри.</li>
+<li><strong>L7</strong> = &quot;умный&quot; балансировщик. Медленнее, дороже, но понимает протоколы и может делать умную маршрутизацию.</li>
+<li><strong>В продакшене</strong> часто используют <strong>оба</strong>: L4 на фронтенде для сырого трафика, L7 внутри для микросервисов.</li>
+</ul>
+<p><strong>В вашем контексте</strong>: балансировщик перед Connection Servers работает на L4, потому что ему нужно просто принять миллион TCP-соединений и пробросить их дальше, не вникая в WebSocket-протокол. Это экономит память и CPU.</p>
+
+</div>
+</article>
+<nav class="pn">
+<a class="prev" href="spravka-sokety.html">← Сокеты (Sockets)</a>
+<span></span>
+</nav>
+<footer class="foot">
+  <a href="../trainer.html#course/ref/%D0%A1%D0%B5%D1%82%D0%B5%D0%B2%D1%8B%D0%B5%20%D1%83%D1%80%D0%BE%D0%B2%D0%BD%D0%B8%20(L4%2C%20L7%20%D0%B8%20%D0%B4%D1%80%D1%83%D0%B3%D0%B8%D0%B5)%20%D0%BF%D1%80%D0%BE%D1%81%D1%82%D1%8B%D0%BC%D0%B8%20%D1%81%D0%BB%D0%BE%D0%B2%D0%B0%D0%BC%D0%B8">Открыть этот раздел в интерактивном тренажёре →</a><br>
+  <a href="index.html">Оглавление курса</a> · <a href="https://chernoyarova.github.io/messenger_architecture/">Тренажёр: карта, флеш-карточки, сборка схемы</a>
+</footer>
+</div>
+</body>
+</html>

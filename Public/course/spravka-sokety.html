@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Справочный материал курса по архитектуре мессенджера: Сокеты (Sockets).">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://chernoyarova.github.io/messenger_architecture/Public/course/spravka-sokety.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Сокеты (Sockets) — справка курса «Архитектура мессенджера»">
+<meta property="og:description" content="Справочный материал курса по архитектуре мессенджера: Сокеты (Sockets).">
+<meta property="og:url" content="https://chernoyarova.github.io/messenger_architecture/Public/course/spravka-sokety.html">
+<meta property="og:locale" content="ru_RU">
+<title>Сокеты (Sockets) — справка курса «Архитектура мессенджера»</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "TechArticle",
+ "headline": "Сокеты (Sockets)",
+ "description": "Справочный материал курса по архитектуре мессенджера: Сокеты (Sockets).",
+ "inLanguage": "ru",
+ "url": "https://chernoyarova.github.io/messenger_architecture/Public/course/spravka-sokety.html",
+ "isPartOf": {
+  "@type": "Course",
+  "name": "Архитектура мессенджера",
+  "url": "https://chernoyarova.github.io/messenger_architecture/Public/course/"
+ }
+}
+</script>
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+<div class="wrap">
+<header class="crumbs">
+  <a href="index.html">Курс «Архитектура мессенджера»</a> · <span>Справка по сетям</span>
+</header>
+<article>
+<h1>Сокеты (Sockets)</h1>
+<p class="sub">Справочный материал курса по архитектуре мессенджера: Сокеты (Sockets).</p>
+<div class="md">
+<p><strong>Краткое определение:</strong> Программный интерфейс (точка подключения), который обеспечивает двусторонний обмен данными между двумя программами в сети или даже внутри одного компьютера.</p>
+<h2>🧠 Простыми словами</h2>
+<p>Представь большой офисный центр. </p>
+<ul>
+<li><strong>IP-адрес</strong> компьютера — это почтовый адрес самого здания.</li>
+<li><strong>Порт</strong> — это номер комнаты конкретного сотрудника (программы) внутри этого здания.</li>
+<li><strong>Сокет</strong> — это непосредственно <strong>телефонная трубка</strong>, которую этот сотрудник поднял, чтобы созвониться с кем-то из другого здания.</li>
+</ul>
+<p>Пока трубка не положена, канал связи открыт, и собеседники могут говорить (передавать данные) друг другу в реальном времени, не набирая номер заново для каждой фразы. В программировании сокет — это и есть этот &quot;активный телефонный разговор&quot; между двумя приложениями.</p>
+<h2>⚙️ Как это работает (формула и шаги)</h2>
+<p>Математически сокет можно представить простой формулой:</p>
+<blockquote>
+<p><strong>Сокет = IP-адрес + Порт</strong></p>
+</blockquote>
+<p>Эта пара уникально идентифицирует одну сторону соединения в сети.</p>
+<p><strong>Типичный сценарий работы (на примере чата):</strong></p>
+<ol>
+<li><strong>Сервер</strong> создает сокет и «привязывает» (bind) его к определенному порту (например, 8080), начиная «слушать» (listen) входящие подключения.</li>
+<li><strong>Клиент</strong> (твое приложение) создает свой сокет и инициирует соединение (connect) с IP-адресом и портом сервера.</li>
+<li>Происходит установка соединения (например, то самое TCP-рукопожатие). Теперь между двумя сокетами проложен виртуальный «канал» или «труба».</li>
+<li>Данные передаются потоком в обе стороны методами <code>send</code> (отправить) и <code>receive</code> (получить).</li>
+<li>Когда общение закончено, сокеты закрываются (close), освобождая порт для новых подключений.</li>
+</ol>
+<h2>💡 Зачем это нужно разработчику</h2>
+<ul>
+<li><strong>Связь в реальном времени:</strong> Идеально для мессенджеров, многопользовательских онлайн-игр, биржевых котировок, где данные должны приходить мгновенно, а не по запросу.</li>
+<li><strong>Меньше накладных расходов:</strong> В отличие от HTTP (где для каждого запроса часто нужно заново устанавливать соединение и передавать тяжелые заголовки), через сокет можно отправить крошечный пакет данных сразу, как только он появился.</li>
+<li><strong>Гибкость:</strong> Разработчик сам решает, какой протокол использовать «под капотом» сокета: надежный [[TCP]] или быстрый [[UDP]].</li>
+</ul>
+<h2>🆚 Сокеты vs HTTP (для контекста)</h2>
+<ul>
+<li><strong>HTTP</strong> похож на отправку бумажных писем: ты пишешь запрос, отправляешь, ждешь ответ, закрываешь конверт. Чтобы спросить что-то еще, нужно писать новое письмо.</li>
+<li><strong>Сокеты</strong> похожи на телефонный звонок или рацию: ты один раз соединился и можешь говорить столько, сколько нужно, с минимальными задержками.</li>
+</ul>
+<p><em>(Примечание: Современные веб-технологии часто используют <strong>[[WebSocket]]</strong> — это специальный протокол, который позволяет браузеру устанавливать постоянное сокет-соединение с сервером поверх обычного HTTP).</em></p>
+<h2>🔗 Связанные понятия (для Obsidian)</h2>
+<ul>
+<li>[[TCP]]</li>
+<li>[[UDP]]</li>
+<li>[[IP-адрес]]</li>
+<li>[[Порт]]</li>
+<li>[[WebSocket]]</li>
+<li>[[HTTP]]</li>
+<li>[[Модель OSI]]</li>
+</ul>
+<p>#разработка #сети #базовые_понятия #сокеты #обучение #backend #архитектура</p>
+<hr>
+<p>Отличная тема! Что разберем дальше? Может быть, <strong>HTTP</strong>, <strong>WebSocket</strong>, <strong>DNS</strong> или что-то из области баз данных, например, <strong>SQL</strong> vs <strong>NoSQL</strong>?</p>
+
+</div>
+</article>
+<nav class="pn">
+<a class="prev" href="spravka-tcp.html">← TCP (Transmission Control Protocol)</a>
+<a class="next" href="spravka-setevye-urovni.html">Сетевые уровни (L4, L7 и другие) простыми словами →</a>
+</nav>
+<footer class="foot">
+  <a href="../trainer.html#course/ref/%D0%A1%D0%BE%D0%BA%D0%B5%D1%82%D1%8B%20(Sockets)">Открыть этот раздел в интерактивном тренажёре →</a><br>
+  <a href="index.html">Оглавление курса</a> · <a href="https://chernoyarova.github.io/messenger_architecture/">Тренажёр: карта, флеш-карточки, сборка схемы</a>
+</footer>
+</div>
+</body>
+</html>
