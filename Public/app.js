@@ -82,6 +82,7 @@ const ICONS={
   pause:'<path d="M8 4v16M16 4v16"/>',
   download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
   upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 8 5-5 5 5"/><path d="M12 3v12"/>',
+  send:'<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
 };
 function icon(name,size=16){return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;">${ICONS[name]||''}</svg>`;}
 function initStaticIcons(){
@@ -818,6 +819,13 @@ function renderDashboard(){
   const box=document.getElementById('homeBox'); if(!box)return;
   if(hasProgress())renderCabinet(box); else renderLanding(box);
 }
+
+function feedbackHtml(){
+  return `<div class="feedback">
+    <span>Было полезно? Поделись обратной связью с автором</span>
+    <a class="tgbtn" href="https://t.me/monrech" target="_blank" rel="noopener">${icon('send',14)} @monrech</a>
+  </div>`;
+}
 function renderLanding(box){
   const tests=Object.values(TESTS).reduce((a,t)=>a+t.length,0);
   const seq=[
@@ -866,7 +874,8 @@ function renderLanding(box){
       <button onclick="goTab('map')">Открыть карту →</button>
     </div>
   </div>
-  <div style="text-align:center;margin-top:26px;"><button class="linkbtn" style="display:inline-block;width:auto;" onclick="document.getElementById('importFile').click()">У меня есть файл прогресса — импортировать</button></div>`;
+  ${feedbackHtml()}
+  <div style="text-align:center;margin-top:10px;"><button class="linkbtn" style="display:inline-block;width:auto;" onclick="document.getElementById('importFile').click()">У меня есть файл прогресса — импортировать</button></div>`;
 }
 function renderCabinet(box){
   markActive();
@@ -922,7 +931,8 @@ function renderCabinet(box){
       <button class="linkbtn" style="width:auto;padding:6px 12px;" onclick="exportProgress()">${icon('download',13)} Экспорт прогресса</button>
       <button class="linkbtn" style="width:auto;padding:6px 12px;" onclick="document.getElementById('importFile').click()">${icon('upload',13)} Импорт прогресса</button>
       <button class="linkbtn" style="width:auto;padding:6px 12px;" onclick="resetAll()">${icon('rotate',13)} Сбросить весь прогресс</button>
-    </div>`;
+    </div>
+    ${feedbackHtml()}`;
 }
 function continueCourse(){const nx=courseOrder().find(x=>x.type==='sec'&&!secPassed(x.key))||courseOrder()[0];goTab('course');openDoc(nx.type,nx.key);}
 function startCards(){goTab('cards');document.getElementById('btnStudy').click();}
