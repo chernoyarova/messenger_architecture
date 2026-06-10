@@ -1104,7 +1104,6 @@ function renderApiDrill(box){
         :'<span class="ph">путь соберётся здесь — клик по кусочку добавляет, клик по собранному убирает</span>'}</div>
       <div class="pickgrid">${apiPathChips.map(s=>`<button class="pchip" data-seg="${s}"${apiSeq.includes(s)?' disabled':''}>/${s}</button>`).join('')}</div>`;
   box.innerHTML=`
-    <div class="lab">API-конструктор · как клиент это запросит?</div>
     <div class="estq">${apiCur.task}</div>
     <div class="mrow">${AD_METHODS.map(m=>`<button class="mbtn${apiMethod===m?' on':''}" data-m="${m}">${m}</button>`).join('')}</div>
     ${work}
@@ -1173,8 +1172,7 @@ function renderDbDrill(box){
     const done=st[t.name]&&st[t.name].complete;
     return `<button class="tchip${dbTable===t.name?' on':''}${done?' done':''}" data-t="${t.name}">${done?'✓ ':''}${t.name}</button>`;
   }).join('');
-  box.innerHTML=`<div class="lab">Модель данных · собери таблицу по памяти</div>
-    <div class="tchips">${chips}</div>${dbTable?dbBody():
+  box.innerHTML=`<div class="tchips">${chips}</div>${dbTable?dbBody():
     `<p class="note lg">Выбери таблицу и восстанови её: сначала <b>столбцы по памяти</b>, потом <b>ключевые решения</b> — шардирование, первичный ключ, что лежит ссылкой. Ровно то, что спрашивают после «какие таблицы заведёшь?».</p>`}`;
   box.querySelectorAll('.tchip').forEach(b=>b.onclick=()=>dbStart(b.dataset.t));
   dbBind(box);
