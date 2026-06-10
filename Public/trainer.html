@@ -40,6 +40,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script>/* тема применяется до загрузки стилей, чтобы не мигало белым */
+(function(){var t=localStorage.getItem('msg_theme')||(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t;})();</script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -51,8 +53,11 @@
       <button class="tab" data-view="course">📖 Курс</button>
       <button class="tab" data-view="build">🧩 Собери схему</button>
       <button class="tab" data-view="cards">🃏 Карточки</button>
+      <button class="tab" data-view="estimate">🧮 Прикидки</button>
+      <button class="tab" data-view="interview">🎤 Прогон</button>
       <button class="tab" data-view="map">🗺️ Карта</button>
     </nav>
+    <button class="ghost iconbtn" id="themeBtn" title="Светлая / тёмная тема">🌙</button>
   </header>
 
   <!-- ============ HOME (DASHBOARD) ============ -->
@@ -88,6 +93,10 @@
         <select class="lvlSelect" id="lvlSelect"></select>
         <button class="ghost arrow" id="lvlNext" title="Следующий уровень">›</button>
       </div>
+      <select class="lvlSelect" id="modeSelect" title="Режим сборки">
+        <option value="easy">💡 С подсказками</option>
+        <option value="hard">🧠 Чистая доска</option>
+      </select>
       <span id="lvlDesc"></span>
     </div>
 
@@ -142,6 +151,19 @@
         </div>
       </div>
     </div>
+  </section>
+
+  <!-- ============ ESTIMATE (back-of-envelope) ============ -->
+  <section class="view" id="view-estimate">
+    <div class="panel" style="max-width:780px;margin:0 auto;padding:22px 24px;">
+      <div class="lab">Прикидки · back-of-envelope</div>
+      <div id="estBox"></div>
+    </div>
+  </section>
+
+  <!-- ============ INTERVIEW RUN ============ -->
+  <section class="view" id="view-interview">
+    <div id="ivBox" style="max-width:780px;margin:0 auto;"></div>
   </section>
 
   <!-- ============ MAP (native) ============ -->

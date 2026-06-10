@@ -26,6 +26,8 @@ function goTab(name,opts){
   if(name==='cards') renderCardsSide();
   if(name==='home') renderDashboard();
   if(name==='course') renderToc();
+  if(name==='estimate') renderEstimate();
+  if(name==='interview') renderInterview();
   if(!(opts&&opts.noHash)) setHash(name==='course'?hashForDoc(curDoc):'#'+name);
   window.scrollTo(0,0);
 }
@@ -39,10 +41,40 @@ function applyHash(){
     goTab('course',{noHash:true});
     if(parts[1]==='ref'&&parts[2]) openRef(parts[2],{noHash:true});
     else if(parts[1]) openSection(parts[1],{noHash:true});
-  } else if(['home','build','cards','map'].includes(tab)) goTab(tab,{noHash:true});
+  } else if(['home','build','cards','map','estimate','interview'].includes(tab)) goTab(tab,{noHash:true});
   else goTab('home',{noHash:true});
 }
 window.addEventListener('hashchange',()=>{ if(location.hash!==lastAppliedHash) applyHash(); });
+
+/* ==================== ТЕМА ==================== */
+const themeBtn=document.getElementById('themeBtn');
+function syncThemeBtn(){themeBtn.textContent=document.documentElement.dataset.theme==='dark'?'☀️':'🌙';}
+themeBtn.onclick=()=>{
+  const t=document.documentElement.dataset.theme==='dark'?'light':'dark';
+  document.documentElement.dataset.theme=t;localStorage.setItem('msg_theme',t);syncThemeBtn();
+};
+syncThemeBtn();
+
+/* ==================== ПРАЗДНОВАНИЯ ==================== */
+function celebrate(){
+  const colors=['#2f6bff','#5b63e6','#16a06a','#e0701c','#9b46e8','#e6397a','#f4c95d'];
+  for(let i=0;i<70;i++){
+    const c=document.createElement('i');c.className='confetti';
+    c.style.left=(6+Math.random()*88)+'vw';
+    c.style.background=colors[i%colors.length];
+    c.style.animationDelay=(Math.random()*.3)+'s';
+    c.style.animationDuration=(1+Math.random()*.9)+'s';
+    c.style.setProperty('--dx',(Math.random()*140-70)+'px');
+    document.body.appendChild(c);setTimeout(()=>c.remove(),2400);
+  }
+}
+let toastTimer=null;
+function showToast(msg){
+  let t=document.getElementById('toast');
+  if(!t){t=document.createElement('div');t.id='toast';document.body.appendChild(t);}
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
 
 /* ==================== ИГРА «СОБЕРИ СХЕМУ» ==================== */
 const SVGNS='http://www.w3.org/2000/svg';
@@ -50,6 +82,8 @@ const svg=document.getElementById('boardSvg');
 const BSTORE='msg_build_v1', BLVL='msg_build_lvl';
 let curLevel=0, levelNodes=[], reqLinks=[], placed={}, phase='place', paletteOrder=[];
 let pickChip=null, pickNode=null, doneLinks=new Set(), missCount=0, hintTimer=null, drag=null;
+let buildMode=localStorage.getItem('msg_build_mode')||'easy', recallLeft=[], hintsUsed=0, levelStart=0;
+function fmtDur(ms){const s=Math.max(1,Math.round(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
 
 function bestStore(){try{return JSON.parse(localStorage.getItem(BSTORE))||{}}catch(e){return {}}}
 function saveBest(o){localStorage.setItem(BSTORE,JSON.stringify(o));}
@@ -63,8 +97,9 @@ function renderLevels(){
   const best=bestStore();
   const sel=document.getElementById('lvlSelect');
   sel.innerHTML=LEVELS.map((lv,i)=>{
-    const done=best[lv.id]&&best[lv.id].complete;
-    return `<option value="${i}"${i===curLevel?' selected':''}>${done?'★ ':''}${lv.name}</option>`;
+    const b=best[lv.id], done=b&&b.complete;
+    const mark=done?(b.hardClean?'🧠 ':(b.clean?'✨ ':'★ ')):'';
+    return `<option value="${i}"${i===curLevel?' selected':''}>${mark}${lv.name}</option>`;
   }).join('');
   document.getElementById('lvlDesc').textContent=LEVELS[curLevel].desc;
   document.getElementById('lvlPrev').disabled=curLevel===0;
@@ -73,6 +108,9 @@ function renderLevels(){
 document.getElementById('lvlSelect').onchange=e=>{curLevel=+e.target.value;startLevel();};
 document.getElementById('lvlPrev').onclick=()=>{if(curLevel>0){curLevel--;startLevel();}};
 document.getElementById('lvlNext').onclick=()=>{if(curLevel<LEVELS.length-1){curLevel++;startLevel();}};
+const modeSel=document.getElementById('modeSelect');
+modeSel.value=buildMode;
+modeSel.onchange=()=>{buildMode=modeSel.value;localStorage.setItem('msg_build_mode',buildMode);startLevel(true);};
 
 function startLevel(fresh){
   levelNodes=levelSet(curLevel);
@@ -82,14 +120,21 @@ function startLevel(fresh){
   localStorage.setItem(BLVL,curLevel);
   const done=bestStore()[LEVELS[curLevel].id];
   if(done&&done.complete&&!fresh){ renderSolved(done); return; }
-  placed={}; phase='place'; pickChip=null; pickNode=null; doneLinks=new Set(); missCount=0;
+  placed={}; phase=(buildMode==='hard'?'recall':'place'); pickChip=null; pickNode=null; doneLinks=new Set(); missCount=0;
+  hintsUsed=0; levelStart=Date.now();
+  recallLeft=(phase==='recall')?shuffle(levelNodes.slice()):[];
   paletteOrder=shuffle(levelNodes.slice());
   document.getElementById('doneBanner').classList.remove('show');
   document.getElementById('btnToLinks').style.display='none';
   renderLevels(); renderBoard(); renderPalette(); updateScore();
-  document.getElementById('phaseTag').innerHTML='<span class="fnum">Фаза 1</span> · Расставь блоки';
-  document.getElementById('paletteTitle').textContent='Блоки — перетащи на доску';
+  setPhaseTag();
   renderLegend();
+}
+function setPhaseTag(){
+  const tag=document.getElementById('phaseTag'),tt=document.getElementById('paletteTitle');
+  if(phase==='recall'){tag.innerHTML='<span class="fnum">Фаза 0</span> · Вспомни состав';tt.textContent='Назови компоненты по памяти';}
+  else if(phase==='place'){tag.innerHTML='<span class="fnum">Фаза 1</span> · Расставь блоки';tt.textContent='Блоки — перетащи на доску';}
+  else{tag.innerHTML='<span class="fnum">Фаза 2</span> · Восстанови связи';tt.textContent='Связи';}
 }
 function renderSolved(best){
   placed={}; levelNodes.forEach(id=>placed[id]=true);
@@ -100,14 +145,20 @@ function renderSolved(best){
   updateScore(); renderLegend();
   document.getElementById('phaseTag').innerHTML='<span class="fnum">✓ Собрано</span> · уровень пройден';
   document.getElementById('paletteTitle').textContent='Готово';
-  levelDoneActions(`Уровень уже собран ✓ Лучший результат — ошибок: ${best.miss}.`);
+  levelDoneActions(`Уровень уже собран ✓ Лучший результат — ошибок: ${best.miss}${best.time?` · время ${fmtDur(best.time)}`:''}${best.clean?' · ✨':''}.`);
   const bn=document.getElementById('doneBanner');
   bn.textContent=`✓ Уровень «${LEVELS[curLevel].name}» пройден. Можешь пройти заново или взять следующий уровень.`;
   bn.classList.add('show');
 }
 function levelDoneActions(note){
-  const hasNext=curLevel<LEVELS.length-1;
   const box=document.getElementById('paletteBox');
+  if(IV.active){ // уровень собран внутри прогона интервью — возвращаемся к вопросам
+    box.innerHTML=(note?`<div class="empty">${note}</div>`:'')
+      +`<button class="primary" id="btnIvBack" style="width:100%;">Вернуться к прогону →</button>`;
+    document.getElementById('btnIvBack').onclick=ivBuildDone;
+    return;
+  }
+  const hasNext=curLevel<LEVELS.length-1;
   box.innerHTML=(note?`<div class="empty">${note}</div>`:'')
     +(hasNext?`<button class="primary" id="btnNextLvl" style="width:100%;">Следующий уровень →</button>`:`<div class="empty">Это полная схема — собрано! 🎉</div>`)
     +`<button class="ghost" id="btnRedo" style="width:100%;margin-top:8px;">Пройти заново</button>`;
@@ -133,8 +184,10 @@ function renderBoard(){
       g.appendChild(el('rect',{class:'box',x:n.x,y:n.y,width:n.w,height:n.h,rx:11,stroke:col}));
       const qm=el('text',{class:'qm',x:n.x+n.w/2,y:n.y+n.h/2-3,'text-anchor':'middle','dominant-baseline':'middle'});qm.textContent='?';
       g.appendChild(qm);
-      const ht=el('text',{class:'hint',x:n.x+n.w/2,y:n.y+n.h-9,'text-anchor':'middle'});ht.textContent=n.sub;
-      g.appendChild(ht);
+      if(buildMode!=='hard'){ // в «чистой доске» роли-подсказки скрыты
+        const ht=el('text',{class:'hint',x:n.x+n.w/2,y:n.y+n.h-9,'text-anchor':'middle'});ht.textContent=n.sub;
+        g.appendChild(ht);
+      }
       g.onclick=()=>onSlotClick(id,g);
       svg.appendChild(g);
     }
@@ -144,7 +197,7 @@ function renderBoard(){
 function drawPlaced(id){
   const n=NODES[id], col=LAYERS[n.layer].c;
   const g=el('g',{class:'pnode'}); g.dataset.id=id; g.style.color=col;
-  g.appendChild(el('rect',{class:'box',x:n.x,y:n.y,width:n.w,height:n.h,rx:11,fill:'#fff',stroke:col}));
+  g.appendChild(el('rect',{class:'box',x:n.x,y:n.y,width:n.w,height:n.h,rx:11,fill:'var(--nodefill)',stroke:col}));
   const t1=el('text',{class:'lbl',x:n.x+10,y:n.y+24});t1.textContent=n.label;g.appendChild(t1);
   const t2=el('text',{class:'sub',x:n.x+10,y:n.y+40});t2.textContent=n.sub;g.appendChild(t2);
   g.onclick=()=>onNodeClick(id,g);
@@ -227,6 +280,7 @@ function drawLink(a,b,cls,temp){
 
 function renderPalette(){
   const box=document.getElementById('paletteBox');box.innerHTML='';
+  if(phase==='recall'){ renderRecallBox(box); return; }
   if(phase==='link'){ box.innerHTML='<div class="empty">Соедини блоки: кликни один, потом второй. Нужно восстановить все связи.</div>'; document.getElementById('btnToLinks').style.display='none'; return; }
   const remaining=paletteOrder.filter(id=>!placed[id]);
   if(remaining.length===0){ box.innerHTML='<div class="empty">Все блоки на месте ✓</div>'; return; }
@@ -240,6 +294,39 @@ function renderPalette(){
   });
 }
 
+/* ---- фаза 0 «чистой доски»: вспомнить состав уровня ---- */
+function renderRecallBox(box){
+  document.getElementById('btnToLinks').style.display='none';
+  const got=levelNodes.length-recallLeft.length;
+  box.innerHTML=`
+    <input type="text" id="recallInput" placeholder="Например: балансировщик…" autocomplete="off">
+    <div class="note" style="margin:0 0 8px;">Вспомнено <b>${got} / ${levelNodes.length}</b>. Перечисли компоненты уровня по памяти — Enter после каждого. Неверная догадка = ошибка.</div>
+    <div id="recallList">${levelNodes.filter(id=>!recallLeft.includes(id)).map(id=>`<span class="rchip">${NODES[id].label}</span>`).join('')}</div>
+    <button class="ghost" id="btnRecallGiveup" style="width:100%;margin-top:8px;">Показать остальные (+${recallLeft.length} к ошибкам)</button>`;
+  const inp=document.getElementById('recallInput');
+  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();tryRecall(inp);}};
+  inp.focus();
+  document.getElementById('btnRecallGiveup').onclick=()=>{missCount+=recallLeft.length;recallLeft=[];updateScore();finishRecall();};
+}
+function normName(s){return s.toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9]/g,'');}
+function tryRecall(inp){
+  const v=normName(inp.value); if(v.length<2)return;
+  const hit=recallLeft.find(id=>{
+    const L=normName(NODES[id].label);
+    return v===L||(L.startsWith(v)&&v.length>=2)||(L.includes(v)&&v.length>=4)||v.includes(L);
+  });
+  if(hit){
+    recallLeft=recallLeft.filter(x=>x!==hit);
+    if(!recallLeft.length){finishRecall();return;}
+    renderPalette();updateScore();
+  } else {
+    missCount++;updateScore();
+    inp.classList.add('bad');setTimeout(()=>inp.classList.remove('bad'),400);
+    inp.select();
+  }
+}
+function finishRecall(){phase='place';setPhaseTag();renderBoard();renderPalette();updateScore();}
+
 function checkPlaceDone(){
   if(levelNodes.every(id=>placed[id])){
     document.getElementById('btnToLinks').style.display='block';
@@ -248,29 +335,37 @@ function checkPlaceDone(){
 }
 document.getElementById('btnToLinks').onclick=()=>{
   phase='link'; pickChip=null;
-  document.getElementById('phaseTag').innerHTML='<span class="fnum">Фаза 2</span> · Восстанови связи';
-  document.getElementById('paletteTitle').textContent='Связи';
+  setPhaseTag();
   renderBoard(); renderPalette(); updateScore();
 };
 
 function checkLinksDone(){
   if(doneLinks.size===reqLinks.length && reqLinks.length>0){
-    const best=bestStore(); const lv=LEVELS[curLevel].id;
-    const prev=best[lv]; const score={complete:true,miss:missCount};
-    if(!prev||missCount<prev.miss) best[lv]=score; else best[lv].complete=true;
+    const timeMs=Date.now()-levelStart;
+    const clean=missCount===0&&hintsUsed===0;
+    const best=bestStore(); const lv=LEVELS[curLevel].id; const prev=best[lv]||{};
+    best[lv]={complete:true,
+      miss:Math.min(missCount,prev.miss==null?missCount:prev.miss),
+      time:Math.min(timeMs,prev.time==null?timeMs:prev.time),
+      clean:!!(prev.clean||clean),
+      hardClean:!!(prev.hardClean||(clean&&buildMode==='hard'))};
     saveBest(best);
+    if(IV.active)IV.lastBuild={name:LEVELS[curLevel].name,miss:missCount,time:timeMs,clean};
+    celebrate();
     const bn=document.getElementById('doneBanner');
-    bn.textContent=`✓ Уровень «${LEVELS[curLevel].name}» собран! Ошибок: ${missCount}.`;
+    bn.textContent=`✓ Уровень «${LEVELS[curLevel].name}» собран за ${fmtDur(timeMs)} · ошибок: ${missCount}`
+      +(clean?' · чисто ✨':'')+(buildMode==='hard'?' · чистая доска 🧠':'');
     bn.classList.add('show'); renderLevels();
     document.getElementById('phaseTag').innerHTML='<span class="fnum">✓ Собрано</span> · уровень пройден';
     document.getElementById('paletteTitle').textContent='Готово';
-    levelDoneActions(`Готово! Ошибок: ${missCount}.`);
+    levelDoneActions(`Готово за ${fmtDur(timeMs)} · ошибок: ${missCount}.`);
   }
 }
 
 function updateScore(){
   let cur,tot,label;
-  if(phase==='place'){cur=Object.keys(placed).length;tot=levelNodes.length;label='блоков на месте';}
+  if(phase==='recall'){cur=levelNodes.length-recallLeft.length;tot=levelNodes.length;label='вспомнено';}
+  else if(phase==='place'){cur=Object.keys(placed).length;tot=levelNodes.length;label='блоков на месте';}
   else{cur=doneLinks.size;tot=reqLinks.length;label='связей восстановлено';}
   document.getElementById('pbarFill').style.width=(tot?Math.round(cur/tot*100):0)+'%';
   document.getElementById('phaseCount').textContent=cur+'/'+tot;
@@ -283,13 +378,19 @@ document.getElementById('btnHint').onclick=()=>{
   clearTimeout(hintTimer);
   document.querySelectorAll('.glink.hint').forEach(x=>x.remove());
   document.querySelectorAll('.hintnode').forEach(x=>x.classList.remove('hintnode'));
+  if(phase==='recall'){
+    if(!recallLeft.length)return; hintsUsed++;
+    recallLeft.shift();
+    if(!recallLeft.length){finishRecall();return;}
+    renderPalette();updateScore();return;
+  }
   if(phase==='place'){
-    const miss=levelNodes.find(id=>!placed[id]); if(!miss)return;
+    const miss=levelNodes.find(id=>!placed[id]); if(!miss)return; hintsUsed++;
     pickChip=miss; renderPalette();
     const g=[...svg.querySelectorAll('.slot')].find(s=>s.dataset.id===miss);
     if(g){g.classList.add('armed');hintTimer=setTimeout(()=>g.classList.remove('armed'),1500);}
   } else {
-    const miss=reqLinks.find(l=>!doneLinks.has(linkKey(l[0],l[1]))); if(!miss)return;
+    const miss=reqLinks.find(l=>!doneLinks.has(linkKey(l[0],l[1]))); if(!miss)return; hintsUsed++;
     drawLink(miss[0],miss[1],'hint');
     [miss[0],miss[1]].forEach(id=>{const g=[...svg.querySelectorAll('.pnode')].find(s=>s.dataset.id===id);if(g)g.classList.add('hintnode');});
     hintTimer=setTimeout(()=>{document.querySelectorAll('.glink.hint').forEach(x=>x.remove());document.querySelectorAll('.hintnode').forEach(x=>x.classList.remove('hintnode'));},1800);
@@ -410,13 +511,16 @@ function reveal(){
     </div>`;
   document.querySelectorAll('.grades button').forEach(b=>b.onclick=()=>grade(+b.dataset.g));
 }
-function grade(g){
-  const i=queue[qPos]; const s=srStore(); const k=srKey(i); const c=s[k]||{ease:2.5,interval:0,due:0,reps:0};
+function srApply(i,g){ // SM-2-обновление одной карточки; используется и сессией, и прогоном интервью
+  const s=srStore(); const k=srKey(i); const c=s[k]||{ease:2.5,interval:0,due:0,reps:0};
   if(g===0){ c.ease=Math.max(1.3,c.ease-0.2); c.interval=0; c.reps=0; c.due=Date.now()+10*MIN; }
   else if(g===1){ c.ease=Math.max(1.3,c.ease-0.15); c.interval=Math.max(1,(c.interval||1)*1.2); c.reps++; c.due=Date.now()+c.interval*DAY; }
   else if(g===2){ c.interval=c.reps===0?1:(c.reps===1?3:Math.round((c.interval||1)*c.ease)); c.reps++; c.due=Date.now()+c.interval*DAY; }
   else { c.ease=c.ease+0.15; c.interval=Math.round((c.interval||1)*c.ease*1.3); c.reps++; c.due=Date.now()+c.interval*DAY; }
   s[k]=c; srSave(s); bumpGrades();
+}
+function grade(g){
+  const i=queue[qPos]; srApply(i,g);
   if(g===0) queue.push(i); // показать снова в конце сессии
   qPos++; showCard(); renderCardsSide();
 }
@@ -491,7 +595,7 @@ function navButtons(key){
   h+='<span class="grow"></span>';
   if(key.startsWith('sec:')){
     const n=key.slice(4);const cnt=(window.QUESTIONS||[]).filter(c=>String(c.sec)===n).length;
-    if(cnt)h+=`<button class="ghost" onclick="studySection(${n})">📝 Открытые вопросы (${cnt})</button>`;
+    if(cnt)h+=`<button class="ghost" onclick="studySection('${n}')">📝 Открытые вопросы (${cnt})</button>`;
   }
   if(i<ord.length-1){const nx=ord[i+1];h+=`<button class="ghost" onclick="openDoc('${nx.type}','${nx.key}')">Дальше →</button>`;}
   return h;
@@ -513,6 +617,15 @@ function openRef(id,opts){
   renderToc();
 }
 function studySection(n){secSel=String(n);goTab('cards');document.getElementById('secFilter').value=secSel;renderCardsSide();document.getElementById('btnStudy').click();}
+// ошибки в тесте раздела возвращают его изученные карточки в очередь повторов
+function bumpSectionCards(sec){
+  const s=srStore(); let total=0; const now=Date.now();
+  Q.forEach((c,i)=>{
+    if(String(c.sec)!==String(sec))return; total++;
+    const k=srKey(i); if(s[k]&&s[k].due>now)s[k].due=now;
+  });
+  srSave(s); return total;
+}
 
 /* ---- Тест по разделу ---- */
 const TESTS=window.TESTS||{};
@@ -563,12 +676,18 @@ function checkQuiz(){
   });
   saveTest(quizSec,score);
   const pass=score===qs.length,nx=nextCourseKey();
+  let failCardsBtn='';
+  if(pass){ celebrate(); }
+  else {
+    const n=bumpSectionCards(quizSec);
+    if(n)failCardsBtn=`<button onclick="studySection('${quizSec}')">🃏 Карточки раздела (${n}) →</button>`;
+  }
   document.getElementById('quizfoot').innerHTML=`<div class="qsummary ${pass?'ok':'bad'}">
     <div class="big">${score} / ${qs.length}</div>
-    <div class="msg">${pass?'✓ Раздел пройден — засчитан в прогрессе на Главной.':'Чтобы зачесть раздел, нужно '+qs.length+' из '+qs.length+'. Разбери ошибки и попробуй снова.'}</div>
+    <div class="msg">${pass?'✓ Раздел пройден — засчитан в прогрессе на Главной.':'Чтобы зачесть раздел, нужно '+qs.length+' из '+qs.length+'. Разбери ошибки — карточки раздела поставлены к повтору.'}</div>
     <div class="acts">
       ${pass?(nx?`<button class="primary" onclick="goNextCourse()">Следующий раздел →</button>`:'')
-            :`<button class="primary" onclick="scrollFirstWrong()">К ошибкам ↓</button>`}
+            :`<button class="primary" onclick="scrollFirstWrong()">К ошибкам ↓</button>${failCardsBtn}`}
       <button class="ghost" onclick="resetQuiz()">Пройти заново</button>
     </div>
   </div>`;
@@ -584,7 +703,7 @@ function goNextCourse(){const nx=nextCourseKey();if(nx)openDoc(nx.type,nx.key);}
 /* ---- аналитика ---- */
 const BTIME='msg_time_v1',BDAYS='msg_days_v1',BGRADES='msg_grades_v1';
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
-function markActive(){let days;try{days=JSON.parse(localStorage.getItem(BDAYS))||[];}catch(e){days=[];}const t=todayStr();if(!days.includes(t)){days.push(t);localStorage.setItem(BDAYS,JSON.stringify(days));}}
+function markActive(){let days;try{days=JSON.parse(localStorage.getItem(BDAYS))||[];}catch(e){days=[];}const t=todayStr();if(!days.includes(t)){days.push(t);localStorage.setItem(BDAYS,JSON.stringify(days));const s=streakDays();if(s>=2)showToast('🔥 Стрик: '+s+' '+pluralDay(s)+'!');}}
 function streakDays(){let days;try{days=JSON.parse(localStorage.getItem(BDAYS))||[];}catch(e){days=[];}const set=new Set(days);let s=0,d=new Date();const k=x=>x.getFullYear()+'-'+(x.getMonth()+1)+'-'+x.getDate();if(!set.has(k(d)))d.setDate(d.getDate()-1);while(set.has(k(d))){s++;d.setDate(d.getDate()-1);}return s;}
 function gradesCount(){return +localStorage.getItem(BGRADES)||0;}
 function bumpGrades(){localStorage.setItem(BGRADES,gradesCount()+1);}
@@ -622,6 +741,7 @@ function renderDashboard(){
       <span class="lvlbadge">Уровень: ${label}</span>
       <h2>Готовность к интервью</h2>
       <p>${sub}</p>
+      <div style="margin-top:14px;"><button class="primary" onclick="goTab('interview')">🎤 Прогон интервью</button></div>
     </div>`;
   const sd=streakDays();
   document.getElementById('stats').innerHTML=[
@@ -652,7 +772,7 @@ function renderDashboard(){
 function continueCourse(){const nx=courseOrder().find(x=>x.type==='sec'&&!secPassed(x.key))||courseOrder()[0];goTab('course');openDoc(nx.type,nx.key);}
 function startCards(){goTab('cards');document.getElementById('btnStudy').click();}
 /* ---- экспорт / импорт / сброс прогресса ---- */
-const PROGRESS_KEYS=[READ,SR,SR_V1,BSTORE,TST,BLVL,BTIME,BDAYS,BGRADES];
+const PROGRESS_KEYS=[READ,SR,SR_V1,BSTORE,TST,BLVL,BTIME,BDAYS,BGRADES,'msg_est_v1'];
 function exportProgress(){
   const data={_app:'messenger-trainer',_exported:new Date().toISOString()};
   PROGRESS_KEYS.forEach(k=>{const v=localStorage.getItem(k);if(v!=null)data[k]=v;});
@@ -679,6 +799,218 @@ function resetAll(){
   if(curDoc&&curDoc.startsWith('sec:'))renderQuiz(curDoc.slice(4));
   alert('Прогресс сброшен.');
 }
+
+/* ==================== ПРИКИДКИ (back-of-envelope) ==================== */
+const EST='msg_est_v1';
+function estStats(){try{return JSON.parse(localStorage.getItem(EST))||{n:0,ok:0}}catch(e){return{n:0,ok:0}}}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function fmtInt(n){return Math.round(n).toLocaleString('ru-RU');}
+function fmtAns(n){return (n>=100?Math.round(n):Math.round(n*10)/10).toLocaleString('ru-RU');}
+const EST_T=[
+  ()=>{const D=pick([50,100,200,500]),m=pick([20,40,60]);const ans=D*1e6*m/86400;
+    return {q:`У мессенджера ${D} млн DAU, каждый отправляет в среднем ${m} сообщений в день. Какой средний RPS на отправку?`,unit:'RPS',ans,
+      steps:[`Сообщений в день: ${D} млн × ${m} = ${fmtInt(D*m)} млн`,`В сутках 86 400 с ≈ 10⁵ с`,`${fmtInt(D*m)} млн / 86 400 ≈ ${fmtInt(ans)} RPS`]};},
+  ()=>{const a=pick([10,25,50,120]),k=pick([3,4,5]);const ans=a*1000*k;
+    return {q:`Средняя нагрузка на отправку — ${a} тыс RPS. Для вечернего пика закладывают множитель ×${k}. На какой пиковый RPS проектировать?`,unit:'RPS',ans,
+      steps:[`${a} 000 × ${k} = ${fmtInt(ans)} RPS`,`Пик — то, под что считают число conn-серверов и шардов, а не среднее`]};},
+  ()=>{const N=pick([1,2,5,10]),s=pick([100,200,300]);const ans=N*1e9*s/1e12;
+    return {q:`${N} млрд сообщений в день, среднее сообщение с метаданными — ${s} байт. На сколько ТБ прирастает хранилище за день?`,unit:'ТБ в день',ans,
+      steps:[`${N}×10⁹ сообщений × ${s} Б = ${fmtAns(ans)}×10¹² Б`,`10¹² Б = 1 ТБ → ≈ ${fmtAns(ans)} ТБ/день`,`За год: ×365 ≈ ${fmtAns(ans*365/1000)} ПБ — отсюда шардирование и TTL медиа`]};},
+  ()=>{const C=pick([10,50,100,200]),c=pick([100,200,500]);const ans=C*1e6/(c*1000);
+    return {q:`Онлайн одновременно ${C} млн пользователей; один conn-сервер держит ~${c} тыс WebSocket-соединений. Сколько conn-серверов нужно (без запаса)?`,unit:'серверов',ans,
+      steps:[`${C}×10⁶ / ${c}×10³ = ${fmtInt(ans)}`,`На практике ×1.5–2 — на пик, деплой и падения`]};},
+  ()=>{const C=pick([20,50,100]),b=pick([100,200,500]);const ans=C*1e6*b/1e9;
+    return {q:`Реестр сессий хранит запись на каждого из ${C} млн онлайн-пользователей, запись ≈ ${b} байт. Сколько ГБ памяти под реестр?`,unit:'ГБ',ans,
+      steps:[`${C}×10⁶ × ${b} Б = ${fmtAns(ans)}×10⁹ Б = ${fmtAns(ans)} ГБ`,`Влезает в Redis-кластер из нескольких узлов — поэтому реестр и держат в памяти`]};},
+  ()=>{const N=pick([5,10,50]),t=pick([5,10,30]);const ans=N*1e6/t;
+    return {q:`Канал на ${N} млн подписчиков; пост нужно доставить всем за ~${t} с. Какой темп доставки (сообщений в секунду) должен выдать fan-out?`,unit:'сообщений/с',ans,
+      steps:[`${N}×10⁶ / ${t} с = ${fmtInt(ans)} msg/s`,`Такой темп на запись нереален — поэтому для каналов делают fan-out on read`]};},
+  ()=>{const D=pick([100,200,500]),p=pick([5,10,20]),s=pick([1,2,5]);const ans=D*1e6*(p/100)*s/86400;
+    return {q:`${D} млн DAU, ${p}% из них раз в день отправляют фото по ${s} МБ. Какой средний входящий трафик медиа в МБ/с?`,unit:'МБ/с',ans,
+      steps:[`Фото в день: ${D} млн × ${p}% = ${fmtInt(D*p/100)} млн`,`Объём: × ${s} МБ = ${fmtAns(D*p/100*s/1000)} ТБ/день`,`Делим на 86 400 с ≈ ${fmtInt(ans)} МБ/с — и это мимо канала сообщений, в объектное хранилище`]};},
+  ()=>{const T=pick([50,100,500]),x=pick([2,4,8]);const ans=Math.ceil(T*2/x);
+    return {q:`В БД сообщений ${T} ТБ данных; один шард комфортно держит до ${x} ТБ. Сколько шардов заложить с двукратным запасом на рост?`,unit:'шардов',ans,
+      steps:[`${T} ТБ × 2 (запас) = ${T*2} ТБ`,`${T*2} / ${x} = ${fmtInt(ans)} шардов`,`Число шардов удобно брать степенью двойки — проще решардинг`]};},
+];
+let estCur=null, estChecked=false;
+function newEstimate(){estCur=pick(EST_T)();estChecked=false;renderEstimate();}
+function renderEstimate(){
+  const box=document.getElementById('estBox'); if(!box)return;
+  if(!estCur){newEstimate();return;}
+  const st=estStats();
+  box.innerHTML=`
+    <div class="estq">${estCur.q}</div>
+    <div class="estunit">Ответ — <b>${estCur.unit}</b>. Попадание в диапазон ×2 от точного — зачёт: на интервью важен порядок величины, а не запятая.</div>
+    <div class="estrow"><input id="estInput" type="text" inputmode="decimal" placeholder="число — можно 150000 или 1.5e5">
+      <button class="primary" id="estCheckBtn">Проверить</button></div>
+    <div id="estOut"></div>
+    <div class="note" style="margin-top:14px;">Серия: верно ${st.ok} из ${st.n}${st.n?` (${Math.round(st.ok/st.n*100)}%)`:''} · <button class="linkbtn" style="display:inline;width:auto;padding:0;" onclick="newEstimate()">другая задача ↻</button></div>`;
+  const inp=document.getElementById('estInput');
+  document.getElementById('estCheckBtn').onclick=checkEstimate;
+  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();estChecked?newEstimate():checkEstimate();}};
+  inp.focus();
+}
+function parseEst(v){v=String(v).trim().replace(/\s+/g,'').replace(',','.');const m=parseFloat(v);return isFinite(m)&&m>0?m:null;}
+function estVerdict(v,prob){
+  const ratio=v/prob.ans, ok=ratio>=0.5&&ratio<=2;
+  return {ok,html:`<div class="qsummary ${ok?'ok':'bad'}" style="margin-top:14px;text-align:left;">
+    <div class="big" style="font-size:22px;">${ok?'✓ Зачёт':'✗ Мимо'} <span style="font-size:14px;font-weight:600;">точный ответ: ${fmtAns(prob.ans)} ${prob.unit}</span></div>
+    <div class="eststeps">${prob.steps.map(s=>'· '+s).join('<br>')}</div>
+    <div class="acts" id="estActs" style="justify-content:flex-start;margin-top:12px;"></div></div>`};
+}
+function checkEstimate(){
+  if(estChecked)return;
+  const inp=document.getElementById('estInput');
+  const v=parseEst(inp.value);
+  if(v==null){inp.classList.add('bad');setTimeout(()=>inp.classList.remove('bad'),400);return;}
+  estChecked=true;
+  const r=estVerdict(v,estCur);
+  const st=estStats();st.n++;if(r.ok)st.ok++;localStorage.setItem(EST,JSON.stringify(st));
+  document.getElementById('estOut').innerHTML=r.html;
+  document.getElementById('estActs').innerHTML=`<button class="primary" onclick="newEstimate()">Дальше → <small>(Enter)</small></button>`;
+}
+
+/* ==================== ПРОГОН ИНТЕРВЬЮ ==================== */
+const IV={active:false,plan:[],stage:0,sub:'',t0:0,tEnd:0,cards:[],cardPos:0,revealed:false,estProb:null,estOk:null,lastBuild:null,res:null};
+const IV_SECS={skeleton:['1','2','4'],reliab:['5','6','6A'],session:['3','7'],media:['9'],scale:['11','12','2A'],multi:['10'],rtc:['21','22']};
+function ivStart(short){
+  IV.active=true;IV.t0=Date.now();IV.tEnd=0;IV.stage=0;IV.sub='est';
+  IV.plan=LEVELS.slice(0,short?3:LEVELS.length).map(l=>l.id);
+  IV.estProb=pick(EST_T)();IV.estOk=null;IV.lastBuild=null;
+  IV.res={builds:[],ok:0,again:0};
+  renderInterview();
+}
+function ivHead(){
+  const lbl=IV.sub==='est'?'разминка':(IV.sub==='done'?'итог':`этап ${IV.stage+1} / ${IV.plan.length}`);
+  const t=IV.sub==='done'?fmtDur(IV.tEnd-IV.t0):`<span id="ivTimer">${fmtDur(Date.now()-IV.t0)}</span>`;
+  return `<div class="ivhead"><span class="lab">Прогон интервью · ${lbl}</span>
+    <span class="lab">⏱ ${t} · <button class="linkbtn" style="display:inline;width:auto;padding:0;" onclick="ivAbort()">прервать</button></span></div>`;
+}
+setInterval(()=>{const e=document.getElementById('ivTimer');if(e&&IV.active&&IV.sub!=='done')e.textContent=fmtDur(Date.now()-IV.t0);},1000);
+function renderInterview(){
+  const box=document.getElementById('ivBox'); if(!box)return;
+  if(!IV.active){
+    box.innerHTML=`<div class="ivpanel">
+      <div class="lab">Прогон интервью</div>
+      <h3>Репетиция «Спроектируй мессенджер»</h3>
+      <p>Полный цикл, как на реальном интервью: <b>прикидка нагрузки → схема у доски → углубляющие вопросы вслух</b> — и так уровень за уровнем. Отвечай голосом, как живому интервьюеру: тренируется связная выдача, а не узнавание.</p>
+      <p style="margin-top:8px;">Совет: включи в сборке режим <b>🧠 Чистая доска</b> — сначала вспоминаешь состав уровня, потом расставляешь.</p>
+      <div class="row" style="margin-top:16px;">
+        <button class="primary" onclick="ivStart(false)">Полный прогон · ${LEVELS.length} уровней (~40 мин)</button>
+        <button onclick="ivStart(true)">Короткий · первые 3 уровня (~15 мин)</button>
+      </div></div>`;
+    return;
+  }
+  if(IV.sub==='est'){
+    box.innerHTML=`<div class="ivpanel">${ivHead()}
+      <h3>Разминка: оцени нагрузку</h3>
+      <p>Интервью почти всегда начинается с прикидки. Посчитай вслух, без калькулятора.</p>
+      <div class="estq">${IV.estProb.q}</div>
+      <div class="estunit">Ответ — <b>${IV.estProb.unit}</b>, попадание ×2 — зачёт.</div>
+      <div class="estrow"><input id="ivEstIn" type="text" inputmode="decimal" placeholder="число">
+        <button class="primary" id="ivEstBtn">Проверить</button></div>
+      <div id="ivEstOut"></div></div>`;
+    const inp=document.getElementById('ivEstIn');
+    document.getElementById('ivEstBtn').onclick=ivEstCheck;
+    inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();IV.estOk==null?ivEstCheck():ivNext();}};
+    inp.focus();
+    return;
+  }
+  if(IV.sub==='build'){
+    const lv=LEVELS[IV.stage];
+    box.innerHTML=`<div class="ivpanel">${ivHead()}
+      <h3>Этап ${IV.stage+1}: «${lv.name.replace(/^\d+ · /,'')}»</h3>
+      <p>${lv.desc}</p>
+      <p style="margin-top:8px;">Собери уровень на доске, <b>проговаривая вслух</b>, зачем каждый компонент и куда идёт стрелка. Когда соберёшь — вернёшься сюда к вопросам интервьюера.</p>
+      <div class="row" style="margin-top:16px;"><button class="primary" onclick="ivOpenBuild()">Открыть доску →</button></div></div>`;
+    return;
+  }
+  if(IV.sub==='cards'){
+    if(!IV.cards.length){ivAfterCards();return;}
+    const i=IV.cards[IV.cardPos], c=Q[i];
+    box.innerHTML=`<div>${ivHead()}
+      <div class="flash">
+        <div class="meta"><span class="secpill">Вопрос интервьюера · раздел ${c.sec}</span><span>${IV.cardPos+1} / ${IV.cards.length}</span></div>
+        <div class="q">${c.q}</div>
+        ${IV.revealed?`<div class="answer show">${c.a}</div>`:`<div class="ahint">Ответь вслух, потом сверься ↓ (пробел)</div>`}
+        <div class="spacer"></div>
+        <div class="actions">${IV.revealed
+          ?`<div class="grades" style="grid-template-columns:1fr 1fr;">
+              <button class="g-again" onclick="ivGrade(0)">Плавала<small>клавиша 1</small></button>
+              <button class="g-good" onclick="ivGrade(2)">Ответила уверенно<small>клавиша 2</small></button></div>`
+          :`<button class="primary" style="width:100%;" onclick="ivReveal()">Показать ответ</button>`}</div>
+      </div></div>`;
+    return;
+  }
+  // итог
+  const bm=IV.res.builds.reduce((a,b)=>a+b.miss,0);
+  const buildRows=IV.res.builds.map(b=>`<div>· ${b.name} — ${fmtDur(b.time)}, ошибок ${b.miss}${b.clean?' ✨':''}</div>`).join('');
+  const verdict=IV.res.again>IV.res.ok
+    ?'Вопросы вслух — слабое звено: дожми карточки этих разделов, они уже поставлены к повтору.'
+    :(bm>IV.res.builds.length*2
+      ?'Схема ещё подвисает — гоняй уровни в режиме «чистая доска» до чистых прогонов.'
+      :'Сильный прогон. Держи темп: повторы карточек + полная схема раз в пару дней.');
+  box.innerHTML=`<div class="ivpanel">${ivHead()}
+    <h3>Прогон завершён 🎉</h3>
+    <div class="pillrow" style="margin:12px 0;">
+      <div class="pill"><b>${fmtDur(IV.tEnd-IV.t0)}</b>общее время</div>
+      <div class="pill"><b>${bm}</b>ошибок в сборке</div>
+      <div class="pill"><b>${IV.res.ok} / ${IV.res.ok+IV.res.again}</b>уверенных ответов</div>
+      <div class="pill"><b>${IV.estOk==null?'—':(IV.estOk?'✓':'✗')}</b>прикидка</div>
+    </div>
+    <div class="eststeps" style="font-family:'Archivo',sans-serif;">${buildRows}</div>
+    <p style="margin-top:12px;"><b>${verdict}</b></p>
+    <div class="row" style="margin-top:16px;"><button class="primary" onclick="ivFinish()">Готово</button></div></div>`;
+}
+function ivEstCheck(){
+  if(IV.estOk!=null)return;
+  const inp=document.getElementById('ivEstIn');
+  const v=parseEst(inp.value);
+  if(v==null){inp.classList.add('bad');setTimeout(()=>inp.classList.remove('bad'),400);return;}
+  const r=estVerdict(v,IV.estProb);
+  IV.estOk=r.ok;
+  document.getElementById('ivEstOut').innerHTML=r.html;
+  document.getElementById('estActs').innerHTML=`<button class="primary" onclick="ivNext()">К доске → <small>(Enter)</small></button>`;
+}
+function ivNext(){if(IV.sub==='est'){IV.sub='build';renderInterview();}}
+function ivOpenBuild(){curLevel=IV.stage;goTab('build');startLevel(true);}
+function ivBuildDone(){
+  if(IV.lastBuild){IV.res.builds.push(IV.lastBuild);IV.lastBuild=null;}
+  IV.sub='cards';IV.cards=ivPickCards(IV.plan[IV.stage]);IV.cardPos=0;IV.revealed=false;
+  goTab('interview');
+}
+function ivPickCards(levelId){
+  const secs=IV_SECS[levelId]||[];
+  const idx=Q.map((c,i)=>i).filter(i=>secs.includes(String(Q[i].sec)));
+  const seen=new Set(),out=[];
+  for(const i of shuffle(idx.filter(isDue)).concat(shuffle(idx.filter(isNew))).concat(shuffle(idx.slice()))){
+    if(!seen.has(i)){seen.add(i);out.push(i);}
+    if(out.length===2)break;
+  }
+  return out;
+}
+function ivReveal(){IV.revealed=true;renderInterview();}
+function ivGrade(g){
+  srApply(IV.cards[IV.cardPos],g);
+  if(g===0)IV.res.again++;else IV.res.ok++;
+  IV.cardPos++;IV.revealed=false;
+  if(IV.cardPos>=IV.cards.length)ivAfterCards();else renderInterview();
+}
+function ivAfterCards(){
+  IV.stage++;
+  if(IV.stage>=IV.plan.length){IV.sub='done';IV.tEnd=Date.now();celebrate();}
+  else IV.sub='build';
+  renderInterview();
+}
+function ivAbort(){if(confirm('Прервать прогон? Результат не сохранится.')){IV.active=false;renderInterview();}}
+function ivFinish(){IV.active=false;renderInterview();}
+/* клавиатура в вопросах прогона: пробел — ответ, 1 — плавала, 2 — уверенно */
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('view-interview').classList.contains('on')||!IV.active||IV.sub!=='cards')return;
+  if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
+  if(!IV.revealed&&e.key===' '){e.preventDefault();ivReveal();}
+  else if(IV.revealed&&(e.key==='1'||e.key==='2')){e.preventDefault();ivGrade(e.key==='1'?0:2);}
+});
 
 /* ==================== КАРТА (нативная) ==================== */
 (function(){
@@ -707,13 +1039,13 @@ function resetAll(){
     const n=N[id],shape=n.shape||'rect',col=`var(${LV[n.layer]})`;
     const g=el('g',{class:'node'+(n.isnew?' isnew':'')});g.dataset.id=id;g.style.color=col;let shiftY=0;
     if(shape==='cyl'){const ry=Math.min(8,n.h*0.16);
-      g.appendChild(el('path',{d:cyl(n.x,n.y,n.w,n.h,ry),class:'shape',fill:'#fff',stroke:col,'stroke-width':1.6}));
-      g.appendChild(el('ellipse',{cx:n.x+n.w/2,cy:n.y+ry,rx:n.w/2,ry:ry,class:'lid',fill:'#eef2f9',stroke:col,'stroke-width':1.6}));shiftY=-2;
+      g.appendChild(el('path',{d:cyl(n.x,n.y,n.w,n.h,ry),class:'shape',fill:'var(--nodefill)',stroke:col,'stroke-width':1.6}));
+      g.appendChild(el('ellipse',{cx:n.x+n.w/2,cy:n.y+ry,rx:n.w/2,ry:ry,class:'lid',fill:'var(--cyllid)',stroke:col,'stroke-width':1.6}));shiftY=-2;
     }else if(shape==='queue'){
-      g.appendChild(el('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:11,class:'shape',fill:'#fff',stroke:col,'stroke-width':1.6}));
+      g.appendChild(el('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:11,class:'shape',fill:'var(--nodefill)',stroke:col,'stroke-width':1.6}));
       [0.32,0.5,0.68].forEach(f=>{const lx=n.x+n.w*f;g.appendChild(el('line',{x1:lx,y1:n.y+9,x2:lx,y2:n.y+n.h-9,class:'qline'}));});
     }else{
-      g.appendChild(el('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:11,class:'shape',fill:'#fff',stroke:col,'stroke-width':1.6}));
+      g.appendChild(el('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:11,class:'shape',fill:'var(--nodefill)',stroke:col,'stroke-width':1.6}));
       if(n.layer==='client')g.appendChild(el('rect',{x:n.x+9,y:n.y+5,width:n.w-18,height:4,rx:2,class:'titlebar',fill:col}));
     }
     const cy=n.y+n.h/2+shiftY;
