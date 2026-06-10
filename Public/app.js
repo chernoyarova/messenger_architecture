@@ -820,12 +820,6 @@ function renderDashboard(){
   if(hasProgress())renderCabinet(box); else renderLanding(box);
 }
 
-function feedbackHtml(){
-  return `<div class="feedback">
-    <span>Было полезно? Поделись обратной связью с автором</span>
-    <a class="tgbtn" href="https://t.me/monrech" target="_blank" rel="noopener">${icon('send',14)} @monrech</a>
-  </div>`;
-}
 function renderLanding(box){
   const tests=Object.values(TESTS).reduce((a,t)=>a+t.length,0);
   const seq=[
@@ -874,8 +868,7 @@ function renderLanding(box){
       <button onclick="goTab('map')">Открыть карту →</button>
     </div>
   </div>
-  ${feedbackHtml()}
-  <div style="text-align:center;margin-top:10px;"><button class="linkbtn" style="display:inline-block;width:auto;" onclick="document.getElementById('importFile').click()">У меня есть файл прогресса — импортировать</button></div>`;
+  <div class="landfoot">Было полезно? Напиши автору — <a href="https://t.me/monrech" target="_blank" rel="noopener">${icon('send',12)} @monrech</a><i>·</i><button class="linkbtn" onclick="document.getElementById('importFile').click()">импортировать прогресс</button></div>`;
 }
 function renderCabinet(box){
   markActive();
@@ -932,7 +925,7 @@ function renderCabinet(box){
       <button class="linkbtn" style="width:auto;padding:6px 12px;" onclick="document.getElementById('importFile').click()">${icon('upload',13)} Импорт прогресса</button>
       <button class="linkbtn" style="width:auto;padding:6px 12px;" onclick="resetAll()">${icon('rotate',13)} Сбросить весь прогресс</button>
     </div>
-    ${feedbackHtml()}`;
+    <div class="landfoot">Обратная связь — <a href="https://t.me/monrech" target="_blank" rel="noopener">${icon('send',12)} @monrech</a></div>`;
 }
 function continueCourse(){const nx=courseOrder().find(x=>x.type==='sec'&&!secPassed(x.key))||courseOrder()[0];goTab('course');openDoc(nx.type,nx.key);}
 function startCards(){goTab('cards');document.getElementById('btnStudy').click();}

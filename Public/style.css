@@ -533,7 +533,9 @@ button{border-color:transparent;}
 .estrow input:focus,#recallInput:focus{outline:none;border-color:var(--edge);}
 .md th,.md td{border-color:var(--line2);}
 
-/* ====== обратная связь (Telegram) ====== */
-.feedback{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:34px;font-size:13.5px;color:var(--muted);}
-.tgbtn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:999px;background:var(--bg2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--edge);font-weight:600;font-size:13.5px;text-decoration:none;transition:.15s;border:1px solid transparent;}
-.tgbtn:hover{border-color:var(--edge);box-shadow:0 6px 16px rgba(90,156,224,.22);}
+/* ====== тихая подвал-строка главной ====== */
+.landfoot{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:36px;font-size:13px;color:var(--muted2);}
+.landfoot a{display:inline-flex;align-items:center;gap:5px;color:var(--edge);font-weight:600;text-decoration:none;}
+.landfoot a:hover{text-decoration:underline;}
+.landfoot i{font-style:normal;color:var(--muted2);}
+.landfoot .linkbtn{display:inline;width:auto;padding:0;margin:0;font-size:13px;}
