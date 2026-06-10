@@ -513,15 +513,22 @@ svg#mapSvg{width:100%;height:auto;display:block;}
 .factrow b{color:var(--edge);font-weight:700;}
 .kickrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
 .kickrow span{font-size:12px;font-weight:600;color:var(--edge);background:var(--accentbg);border:1px solid var(--accentline);border-radius:var(--r-pill);padding:4px 12px;letter-spacing:.02em;}
-.blocks3{display:grid;grid-template-columns:repeat(3,1fr);gap:48px;margin-top:52px;}
-@media(max-width:840px){.blocks3{grid-template-columns:1fr;gap:30px;}}
-.b3{display:flex;flex-direction:column;align-items:flex-start;}
-.b3 h3{display:flex;align-items:center;gap:9px;margin:0 0 8px;font-size:18px;font-weight:700;letter-spacing:-.01em;color:var(--ink);}
-.b3 h3 svg{color:var(--edge);flex:none;}
-.b3 p{margin:0 0 16px;font-size:14px;line-height:1.6;color:var(--muted);flex:1;}
-.b3 button{padding:9px 20px;background:var(--bg2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
-.b3 button:hover{border-color:var(--edge);color:var(--edge);}
-.landcta{margin-top:56px;padding:32px 28px;text-align:center;border-radius:24px;background:var(--glass);border:1px solid var(--glassline);box-shadow:var(--shadow);backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);}
+/* секции-витрины: текст + живой кусочек продукта; хайрлайн отделяет секции друг от друга и от героя */
+.landsec{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;margin-top:44px;padding-top:44px;border-top:1px solid var(--line);}
+.landsec.flip .lsdemo{order:-1;}
+@media(max-width:860px){.landsec{grid-template-columns:1fr;gap:24px;margin-top:32px;padding-top:32px;}.landsec.flip .lsdemo{order:0;}}
+.lstext h3{margin:8px 0 10px;font-size:22px;font-weight:800;letter-spacing:-.02em;}
+.lstext p{margin:0 0 18px;font-size:14px;line-height:1.65;color:var(--muted);max-width:48ch;}
+.lsdemo{pointer-events:none;user-select:none;margin-bottom:0;}
+.lsdemo.center{display:flex;flex-direction:column;align-items:center;gap:22px;}
+.lsdemo .cabstats{margin:0;justify-content:center;gap:20px 44px;}
+.lsdemo .qopts{margin-top:10px;}
+/* появление при скролле */
+.reveal{opacity:0;transform:translateY(18px);}
+.reveal.in{opacity:1;transform:none;transition:opacity .6s ease,transform .6s ease;}
+@media (prefers-reduced-motion: reduce){.reveal{opacity:1;transform:none;}}
+/* финальный CTA — без коробки, на той же линии-разделителе, что и секции */
+.landcta{margin-top:44px;padding:44px 0 8px;text-align:center;border-top:1px solid var(--line);}
 .landcta h3{margin:0 0 7px;font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
 .landcta p{margin:0 0 20px;font-size:14px;color:var(--muted);}
 .landsign{margin-top:26px;text-align:center;font-size:13px;color:var(--muted2);line-height:1.6;}
@@ -562,8 +569,6 @@ html[data-theme="dark"] .phone{background:linear-gradient(165deg,#101727 0%,#0D1
   background:var(--topbg);backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);border-top:1px solid var(--glassline);}
 .ph-input .fld{flex:1;height:36px;border-radius:18px;background:var(--bg2);border:1px solid var(--glassline);display:flex;align-items:center;padding:0 14px;font-size:13px;font-weight:500;color:var(--muted2);cursor:pointer;text-align:left;transition:var(--t-fast);}
 .ph-input .fld:hover{border-color:var(--edge);color:var(--edge);}
-.ph-send{width:36px;height:36px;border-radius:50%;background:var(--accgrad);color:#fff;border:none;padding:0;display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer;box-shadow:0 4px 12px rgba(90,156,224,.35);}
-.ph-send:hover{filter:brightness(1.07);color:#fff;}
 @media (prefers-reduced-motion: reduce){.ph-msg{animation:none!important;opacity:1!important;transform:none!important;}.ph-typing{display:none;}}
 @media(max-width:520px){.phone{width:276px;height:480px;}.ph-msgs{padding:76px 12px 70px;}}
 

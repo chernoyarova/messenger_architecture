@@ -874,24 +874,89 @@ function renderLanding(box){
         <div class="ph-typing" style="animation:msgIn .5s forwards ${tIn.toFixed(2)}s, typOut .4s forwards ${tOut.toFixed(2)}s"><i></i><i></i><i></i></div>
         <div class="ph-msg in" style="animation-delay:${(tOut+.3).toFixed(2)}s">Сильно. Следующий вопрос — шардирование 😉<span class="mt">14:07</span></div>
       </div>
-      <div class="ph-input"><button class="fld" onclick="goTab('interview')">Твоя очередь отвечать…</button><button class="ph-send" title="Прогон интервью" onclick="goTab('interview')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-11 11"/><path d="M22 2 15 22l-4-9-9-4Z"/></svg></button></div>
+      <div class="ph-input"><button class="fld" onclick="goTab('interview')">Твоя очередь отвечать…</button></div>
     </div>
   </div>
-  <div class="blocks3">
-    <div class="b3">
-      <h3>${icon('book',18)} Курс</h3>
-      <p>22 раздела — от «что такое мессенджер архитектурно» до E2EE и звонков. После каждого тест: раздел засчитан при 6 из 6.</p>
-      <button onclick="goTab('course')">Читать курс →</button>
+  <div class="landsec flip reveal">
+    <div class="lstext">
+      <div class="lab">Курс</div>
+      <h3>22 раздела — и тест после каждого</h3>
+      <p>Читаешь по порядку: от скелета и доставки одного сообщения до E2EE и звонков. Раздел засчитан только при 6 из 6 — варианты перемешиваются, зубрить буквы бесполезно. Завалила тест — карточки раздела сами встанут к повтору.</p>
+      <button class="ghosty" onclick="continueCourse()">Открыть курс →</button>
     </div>
-    <div class="b3">
-      <h3>${icon('dumbbell',18)} Практика</h3>
-      <p>Пять тренажёров: собери схему по памяти, восстанови API и таблицы, карточки с интервальными повторами, прикидки и прогон интервью.</p>
-      <button onclick="goTab('practice')">Тренироваться →</button>
+    <div class="panel lsdemo">
+      <div class="introsecs">
+        <span class="introsec done"><b>1</b>Что такое мессенджер архитектурно</span>
+        <span class="introsec"><b>2</b>Требования и рамки</span>
+        <span class="introsec"><b>3</b>Связь с сервером</span>
+      </div>
+      <div class="qq mt16"><b>3.</b>Зачем мессенджеру постоянное соединение?</div>
+      <div class="qopts">
+        <span class="qopt right"><span class="ltr">А)</span>Сервер может сам прислать событие — сообщение прилетает мгновенно<span class="verdict">✓ верно</span></span>
+        <span class="qopt faded"><span class="ltr">Б)</span>Так приложение быстрее запускается</span>
+      </div>
+      <div class="qexp show"><b>Ответ: А.</b> Push-модель: новые события приходят сами, без опроса сервера.</div>
     </div>
-    <div class="b3">
-      <h3>${icon('compass',18)} Карта</h3>
-      <p>Живая схема системы: 21 компонент с объяснениями и 15 пошаговых сценариев — от доставки сообщения до группового звонка.</p>
-      <button onclick="goTab('map')">Открыть карту →</button>
+  </div>
+  <div class="landsec reveal">
+    <div class="lstext">
+      <div class="lab">Практика</div>
+      <h3>Пять тренажёров: воспроизведение, а не узнавание</h3>
+      <p>Собери схему по памяти и восстанови связи, собери API-запрос из кусочков, вспомни столбцы таблиц, прикинь нагрузку в уме и прогони интервью целиком — вслух и на время.</p>
+      <button class="ghosty" onclick="goTab('practice')">Тренироваться →</button>
+    </div>
+    <div class="panel lsdemo">
+      <div class="lab">Чистая доска · вспомни состав уровня</div>
+      <div class="pickgrid">
+        <span class="pchip right">Conn-сервер</span>
+        <span class="pchip right">Message-сервис</span>
+        <span class="pchip right">БД (шардированная)</span>
+        <span class="pchip missed">Реестр сессий</span>
+        <span class="pchip wrong">CDN</span>
+        <span class="pchip faded">SFU</span>
+      </div>
+      <div class="done-banner show">✓ Уровень «Скелет» собран за 1:42 · ошибок 1</div>
+    </div>
+  </div>
+  <div class="landsec flip reveal">
+    <div class="lstext">
+      <div class="lab">Карта</div>
+      <h3>Живая схема: ${Object.keys(window.MAPDATA.NODES).length} компонент и ${window.MAPDATA.SCENARIOS.length} сценариев</h3>
+      <p>Кликни любой блок — что он делает и зачем. Выбери сценарий — от доставки сообщения до группового звонка — и пройди его по шагам прямо на карте, с зумом и подсветкой пути.</p>
+      <button class="ghosty" onclick="goTab('map')">Открыть карту →</button>
+    </div>
+    <div class="panel lsdemo">
+      <div class="lab mb8">Сценарий · онлайн-доставка · шаг 2 / 7</div>
+      <svg viewBox="0 0 520 240" width="100%" style="display:block;">
+        <line class="link active" x1="140" y1="45" x2="196" y2="45"/>
+        <line class="link active" x1="336" y1="45" x2="380" y2="45"/>
+        <line class="link dim" x1="444" y1="68" x2="444" y2="160"/>
+        <line class="link dim" x1="380" y1="60" x2="280" y2="160"/>
+        <line class="link dim" x1="196" y1="183" x2="140" y2="183"/>
+        <g class="node active" style="color:var(--client)"><rect class="shape" x="12" y="22" width="128" height="46" rx="11" fill="var(--nodefill)" stroke="currentColor" stroke-width="1.6"/><text class="label" x="76" y="42" text-anchor="middle">Алиса</text><text class="sub" x="76" y="56" text-anchor="middle">клиент-отправитель</text></g>
+        <g class="node active" style="color:var(--edge)"><rect class="shape" x="196" y="22" width="140" height="46" rx="11" fill="var(--nodefill)" stroke="currentColor" stroke-width="1.6"/><text class="label" x="266" y="42" text-anchor="middle">Conn-сервер A</text><text class="sub" x="266" y="56" text-anchor="middle">соединение Алисы</text></g>
+        <g class="node dim" style="color:var(--core)"><rect class="shape" x="380" y="22" width="128" height="46" rx="11" fill="var(--nodefill)" stroke="currentColor" stroke-width="1.6"/><text class="label" x="444" y="42" text-anchor="middle">Message-сервис</text><text class="sub" x="444" y="56" text-anchor="middle">ядро + сигналинг</text></g>
+        <g class="node dim" style="color:var(--client)"><rect class="shape" x="12" y="160" width="128" height="46" rx="11" fill="var(--nodefill)" stroke="currentColor" stroke-width="1.6"/><text class="label" x="76" y="180" text-anchor="middle">Боб</text><text class="sub" x="76" y="194" text-anchor="middle">клиент-получатель</text></g>
+        <g class="node dim" style="color:var(--edge)"><rect class="shape" x="196" y="160" width="140" height="46" rx="11" fill="var(--nodefill)" stroke="currentColor" stroke-width="1.6"/><text class="label" x="266" y="180" text-anchor="middle">Conn-сервер B</text><text class="sub" x="266" y="194" text-anchor="middle">соединение Боба</text></g>
+        <g class="node dim" style="color:var(--store)"><rect class="shape" x="380" y="160" width="128" height="46" rx="11" fill="var(--nodefill)" stroke="currentColor" stroke-width="1.6"/><text class="label" x="444" y="180" text-anchor="middle">БД</text><text class="sub" x="444" y="194" text-anchor="middle">durable-лог</text></g>
+      </svg>
+    </div>
+  </div>
+  <div class="landsec reveal">
+    <div class="lstext">
+      <div class="lab">Личный кабинет</div>
+      <h3>Готовность к интервью — одним числом</h3>
+      <p>Балл 0–100 складывается из курса, сборки схемы и карточек. Рядом — стрик, время в тренажёре и прогресс всех пяти направлений. Без регистрации: всё хранится в твоём браузере, экспорт — одним файлом.</p>
+      <button class="ghosty" onclick="continueCourse()">Начать копить прогресс →</button>
+    </div>
+    <div class="panel lsdemo center">
+      <div class="ring" id="demoRing" style="--p:0"><div class="hole"><b><span id="demoReady">0</span><i>%</i></b><small>ГОТОВНОСТЬ</small></div></div>
+      <div class="cabstats">
+        <span><b>4 ч 12 м</b>в тренажёре</span>
+        <span><b>5</b>дней подряд</span>
+        <span><b>22 / 22</b>тестов</span>
+        <span><b>310</b>повторов</span>
+      </div>
     </div>
   </div>
   <div class="landcta">
@@ -902,6 +967,31 @@ function renderLanding(box){
   <div class="landsign">Курс и тренажёры делаю я — <a href="https://t.me/monrech" target="_blank" rel="noopener">@monrech</a>, готовясь к своим system design собеседованиям. Замечания и идеи — пиши.</div>
   <div class="landsign">Занималась раньше на другом устройстве? <button class="linkbtn" onclick="document.getElementById('importFile').click()">Импортировать прогресс</button></div>
   `;
+  initLandingFx(box);
+}
+/* появление секций лендинга при скролле + счётчик кольца готовности */
+function initLandingFx(box){
+  const io=new IntersectionObserver(es=>es.forEach(e=>{
+    if(!e.isIntersecting)return;
+    e.target.classList.add('in');
+    if(e.target.querySelector('#demoRing'))animateDemoRing(e.target);
+    io.unobserve(e.target);
+  }),{threshold:.25});
+  box.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+}
+function animateDemoRing(scope){
+  const ring=scope.querySelector('#demoRing'),num=scope.querySelector('#demoReady');
+  if(!ring||ring.dataset.done)return; ring.dataset.done='1';
+  const T=66;
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){ring.style.setProperty('--p',T);num.textContent=T;return;}
+  const t0=performance.now();
+  (function frame(t){
+    const k=Math.min(1,(t-t0)/900);
+    const e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2; // ease-in-out
+    const v=Math.round(T*e);
+    ring.style.setProperty('--p',v);num.textContent=v;
+    if(k<1)requestAnimationFrame(frame);
+  })(t0);
 }
 function renderCabinet(box){
   markActive();
