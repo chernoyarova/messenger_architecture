@@ -43,7 +43,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script>/* тема применяется до загрузки стилей, чтобы не мигало белым */
 (function(){var t=localStorage.getItem('msg_theme')||(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t;})();</script>
-<link rel="stylesheet" href="style.css?v=20260614a">
+<link rel="stylesheet" href="style.css?v=20260615c">
 </head>
 <body>
 <div class="wrap">
@@ -66,6 +66,10 @@
   <!-- ============ COURSE ============ -->
   <section class="view" id="view-course">
     <div class="coursegrid">
+      <button class="tocbar" id="tocBar" aria-expanded="false" aria-controls="toc">
+        <span id="tocBarTitle">Оглавление</span>
+        <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
       <nav class="toc" id="toc"></nav>
       <article class="reader" id="reader">
         <div class="rmeta">Курс</div>
@@ -253,6 +257,6 @@
 <script src="tests.js?v=20260611g"></script>
 <script src="mapdata.js?v=20260611g"></script>
 <script src="apidb.js?v=20260611g"></script>
-<script src="app.js?v=20260614a"></script>
+<script src="app.js?v=20260615a"></script>
 </body>
 </html>

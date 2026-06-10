@@ -37,6 +37,8 @@ function goTab(name,opts){
 function showPractice(){
   document.querySelectorAll('#view-practice .pview').forEach(x=>x.classList.toggle('on',x.id==='view-'+practiceMode));
   document.querySelectorAll('.pseg').forEach(b=>b.classList.toggle('on',b.dataset.p===practiceMode));
+  const onSeg=document.querySelector('.pseg.on'); // лента тренажёров скроллится на телефоне — активная вкладка должна быть видна
+  if(onSeg)onSeg.scrollIntoView({block:'nearest',inline:'nearest'});
   if(practiceMode==='cards') renderCardsSide();
   if(practiceMode==='apidb') renderApiDb();
   if(practiceMode==='estimate') renderEstimate();
@@ -522,7 +524,7 @@ function renderHeat(){
 function renderFlashIdle(due,nw){
   const status=due?`К повтору сейчас: ${due}.`:(nw?'Срочных повторов нет.':'Все повторы сделаны — сессия даст случайную выборку для прогона.');
   document.getElementById('flashBox').innerHTML=
-    `<div class="emptyq"><b>Готова тренироваться?</b>${status} ${nw?`Новых вопросов: ${nw}.`:''}<br><br>Жми «Начать сессию» справа. Отвечай вслух или на бумаге <i>до</i> того, как раскроешь ответ — так тренируется воспроизведение, а не узнавание.</div>`;
+    `<div class="emptyq"><b>Готова тренироваться?</b>${status} ${nw?`Новых вопросов: ${nw}.`:''}<br><br>Отвечай вслух или на бумаге <i>до</i> того, как раскроешь ответ — так тренируется воспроизведение, а не узнавание.<div class="mt16"><button class="primary" onclick="startSession()">Начать сессию</button></div></div>`;
 }
 
 function startSession(){
@@ -633,6 +635,26 @@ function courseOrder(){
 }
 let curDoc=null;
 
+/* мобильное оглавление: список спрятан за кнопкой-шапкой с названием текущего
+   раздела; выбор пункта закрывает список (на десктопе кнопка скрыта стилями) */
+const tocBarEl=document.getElementById('tocBar');
+if(tocBarEl)tocBarEl.onclick=()=>{
+  const open=document.getElementById('toc').classList.toggle('open');
+  tocBarEl.setAttribute('aria-expanded',open);
+};
+function closeToc(){
+  document.getElementById('toc').classList.remove('open');
+  if(tocBarEl)tocBarEl.setAttribute('aria-expanded','false');
+}
+function updateTocBar(){
+  const el=document.getElementById('tocBarTitle');if(!el)return;
+  let t='Оглавление';
+  if(curDoc==='intro')t='О курсе · что тебя ждёт';
+  else if(curDoc&&curDoc.startsWith('sec:')){const n=curDoc.slice(4),s=COURSE.sections[n];if(s)t=`Раздел ${n} · ${s.title}`;}
+  else if(curDoc&&curDoc.startsWith('ref:')){const r=COURSE.refs.find(x=>x.id===curDoc.slice(4));if(r)t='Справка · '+r.title;}
+  el.textContent=t;
+}
+
 function renderToc(){
   const toc=document.getElementById('toc');toc.innerHTML='';
   const ib=document.createElement('button');
@@ -663,6 +685,7 @@ function renderToc(){
       toc.appendChild(b);
     });
   }
+  updateTocBar();
 }
 function mdToHtml(md){
   const clean=md.replace(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g,'$1'); // wiki-ссылки → текст
@@ -707,7 +730,7 @@ function openIntro(opts){
     <div class="introprog"><div class="bar"><i style="width:${secNums.length?Math.round(passed/secNums.length*100):0}%"></i></div><span>${passed} / ${secNums.length} разделов пройдено</span></div>
     ${partsHtml}
     <div class="rnav"><span class="grow"></span><button class="primary" onclick="continueCourse()">${startBtn}</button></div>`;
-  renderToc();
+  renderToc();closeToc();
   window.scrollTo(0,0);
 }
 function openSection(n,opts){
@@ -716,14 +739,14 @@ function openSection(n,opts){
   if(!(opts&&opts.noHash)) setHash(hashForDoc(curDoc));
   renderReader('Раздел '+n,s.title,mdToHtml(s.md),navButtons('sec:'+n));
   renderQuiz(n);
-  renderToc();
+  renderToc();closeToc();
 }
 function openRef(id,opts){
   const r=COURSE.refs.find(x=>x.id===id);if(!r)return;
   curDoc='ref:'+id;
   if(!(opts&&opts.noHash)) setHash(hashForDoc(curDoc));
   renderReader('Справка',r.title,mdToHtml(r.md),navButtons('ref:'+id));
-  renderToc();
+  renderToc();closeToc();
 }
 function studySection(n){secSel=String(n);goTab('cards');document.getElementById('secFilter').value=secSel;renderCardsSide();startSession();}
 // ошибки в тесте раздела возвращают его изученные карточки в очередь повторов
