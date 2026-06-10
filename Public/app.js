@@ -84,7 +84,8 @@ const svg=document.getElementById('boardSvg');
 const BSTORE='msg_build_v1', BLVL='msg_build_lvl';
 let curLevel=0, levelNodes=[], reqLinks=[], placed={}, phase='place', paletteOrder=[];
 let pickChip=null, pickNode=null, doneLinks=new Set(), missCount=0, hintTimer=null, drag=null;
-let buildMode=localStorage.getItem('msg_build_mode')||'easy', recallLeft=[], hintsUsed=0, levelStart=0;
+let buildMode=localStorage.getItem('msg_build_mode')||'easy', hintsUsed=0, levelStart=0;
+let recallChips=[], recallPick=new Set(), recallChecked=false;
 function fmtDur(ms){const s=Math.max(1,Math.round(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
 
 function bestStore(){try{return JSON.parse(localStorage.getItem(BSTORE))||{}}catch(e){return {}}}
@@ -122,9 +123,13 @@ function startLevel(fresh){
   localStorage.setItem(BLVL,curLevel);
   const done=bestStore()[LEVELS[curLevel].id];
   if(done&&done.complete&&!fresh){ renderSolved(done); return; }
-  placed={}; phase=(buildMode==='hard'?'recall':'place'); pickChip=null; pickNode=null; doneLinks=new Set(); missCount=0;
+  placed={}; pickChip=null; pickNode=null; doneLinks=new Set(); missCount=0;
   hintsUsed=0; levelStart=Date.now();
-  recallLeft=(phase==='recall')?shuffle(levelNodes.slice()):[];
+  // фаза 0 «вспомни состав» имеет смысл, только если есть компоненты-обманки вне уровня
+  const hasDistractors=Object.keys(NODES).some(id=>!levelNodes.includes(id));
+  phase=(buildMode==='hard'&&hasDistractors)?'recall':'place';
+  recallChips=(phase==='recall')?shuffle(Object.keys(NODES)):[];
+  recallPick=new Set(); recallChecked=false;
   paletteOrder=shuffle(levelNodes.slice());
   document.getElementById('doneBanner').classList.remove('show');
   document.getElementById('btnToLinks').style.display='none';
@@ -296,36 +301,37 @@ function renderPalette(){
   });
 }
 
-/* ---- фаза 0 «чистой доски»: вспомнить состав уровня ---- */
+/* ---- фаза 0 «чистой доски»: отметить состав уровня среди всех компонентов ---- */
 function renderRecallBox(box){
   document.getElementById('btnToLinks').style.display='none';
-  const got=levelNodes.length-recallLeft.length;
-  box.innerHTML=`
-    <input type="text" id="recallInput" placeholder="Например: балансировщик…" autocomplete="off">
-    <div class="note" style="margin:0 0 8px;">Вспомнено <b>${got} / ${levelNodes.length}</b>. Перечисли компоненты уровня по памяти — Enter после каждого. Неверная догадка = ошибка.</div>
-    <div id="recallList">${levelNodes.filter(id=>!recallLeft.includes(id)).map(id=>`<span class="rchip">${NODES[id].label}</span>`).join('')}</div>
-    <button class="ghost" id="btnRecallGiveup" style="width:100%;margin-top:8px;">Показать остальные (+${recallLeft.length} к ошибкам)</button>`;
-  const inp=document.getElementById('recallInput');
-  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();tryRecall(inp);}};
-  inp.focus();
-  document.getElementById('btnRecallGiveup').onclick=()=>{missCount+=recallLeft.length;recallLeft=[];updateScore();finishRecall();};
-}
-function normName(s){return s.toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9]/g,'');}
-function tryRecall(inp){
-  const v=normName(inp.value); if(v.length<2)return;
-  const hit=recallLeft.find(id=>{
-    const L=normName(NODES[id].label);
-    return v===L||(L.startsWith(v)&&v.length>=2)||(L.includes(v)&&v.length>=4)||v.includes(L);
-  });
-  if(hit){
-    recallLeft=recallLeft.filter(x=>x!==hit);
-    if(!recallLeft.length){finishRecall();return;}
+  const chips=recallChips.map(id=>{
+    const inLvl=levelNodes.includes(id);
+    let cls='pchip arch';
+    if(recallChecked)cls+=inLvl?(recallPick.has(id)?' right':' missed'):(recallPick.has(id)?' wrong':' faded');
+    else if(recallPick.has(id))cls+=' on';
+    return `<button class="${cls}" data-id="${id}">${NODES[id].label}</button>`;
+  }).join('');
+  box.innerHTML=`<div class="note" style="margin:0 0 8px;">Что входит в уровень «${LEVELS[curLevel].name}»? Отметь нужные компоненты (${levelNodes.length} шт.), лишние не трогай.</div>
+    <div class="pickgrid">${chips}</div>
+    ${recallChecked
+      ?`<button class="primary" id="btnRecallGo" style="width:100%;margin-top:8px;">К расстановке →</button>`
+      :`<button class="primary" id="btnRecallCheck" style="width:100%;margin-top:8px;">Проверить состав</button>`}`;
+  box.querySelectorAll('.pchip[data-id]').forEach(b=>b.onclick=()=>{
+    if(recallChecked)return;
+    const id=b.dataset.id;
+    recallPick.has(id)?recallPick.delete(id):recallPick.add(id);
     renderPalette();updateScore();
-  } else {
-    missCount++;updateScore();
-    inp.classList.add('bad');setTimeout(()=>inp.classList.remove('bad'),400);
-    inp.select();
-  }
+  });
+  const ck=document.getElementById('btnRecallCheck');
+  if(ck)ck.onclick=()=>{
+    let errs=0;
+    levelNodes.forEach(id=>{if(!recallPick.has(id))errs++;});
+    recallPick.forEach(id=>{if(!levelNodes.includes(id))errs++;});
+    missCount+=errs;recallChecked=true;
+    renderPalette();updateScore();
+  };
+  const go=document.getElementById('btnRecallGo');
+  if(go)go.onclick=finishRecall;
 }
 function finishRecall(){phase='place';setPhaseTag();renderBoard();renderPalette();updateScore();}
 
@@ -366,7 +372,7 @@ function checkLinksDone(){
 
 function updateScore(){
   let cur,tot,label;
-  if(phase==='recall'){cur=levelNodes.length-recallLeft.length;tot=levelNodes.length;label='вспомнено';}
+  if(phase==='recall'){cur=recallPick.size;tot=levelNodes.length;label='отмечено';}
   else if(phase==='place'){cur=Object.keys(placed).length;tot=levelNodes.length;label='блоков на месте';}
   else{cur=doneLinks.size;tot=reqLinks.length;label='связей восстановлено';}
   document.getElementById('pbarFill').style.width=(tot?Math.round(cur/tot*100):0)+'%';
@@ -381,9 +387,8 @@ document.getElementById('btnHint').onclick=()=>{
   document.querySelectorAll('.glink.hint').forEach(x=>x.remove());
   document.querySelectorAll('.hintnode').forEach(x=>x.classList.remove('hintnode'));
   if(phase==='recall'){
-    if(!recallLeft.length)return; hintsUsed++;
-    recallLeft.shift();
-    if(!recallLeft.length){finishRecall();return;}
+    const miss=levelNodes.find(id=>!recallPick.has(id)); if(!miss||recallChecked)return;
+    hintsUsed++; recallPick.add(miss);
     renderPalette();updateScore();return;
   }
   if(phase==='place'){
@@ -867,42 +872,42 @@ const EST_T=[
     return {q:`В БД сообщений ${T} ТБ данных; один шард комфортно держит до ${x} ТБ. Сколько шардов заложить с двукратным запасом на рост?`,unit:'шардов',ans,
       steps:[`${T} ТБ × 2 (запас) = ${T*2} ТБ`,`${T*2} / ${x} = ${fmtInt(ans)} шардов`,`Число шардов удобно брать степенью двойки — проще решардинг`]};},
 ];
-let estCur=null, estChecked=false;
-function newEstimate(){estCur=pick(EST_T)();estChecked=false;renderEstimate();}
+let estCur=null, estChecked=false, estPick=null;
+function estOptions(ans){ // 4 варианта: точный + промахи на порядок и «в разы»
+  const seen=new Set(),out=[];
+  [1,10,0.1,3].forEach(k=>{const v=ans*k,l=fmtAns(v);if(!seen.has(l)){seen.add(l);out.push({v,l,ok:k===1});}});
+  const extra=[30,0.03,0.5,300];
+  while(out.length<4&&extra.length){const v=ans*extra.shift(),l=fmtAns(v);if(!seen.has(l)){seen.add(l);out.push({v,l,ok:false});}}
+  return shuffle(out);
+}
+function estOptsHtml(prob,checked,picked){
+  return `<div class="qopts" style="margin-top:4px;">${prob.opts.map((o,i)=>{
+    let cls='qopt';
+    if(checked)cls+=o.ok?' right':(i===picked?' wrong':' faded');
+    return `<button class="${cls}" data-i="${i}">≈ ${o.l} ${prob.unit}</button>`;
+  }).join('')}</div>`;
+}
+function estStepsHtml(prob,nextHtml){
+  return `<div class="eststeps" style="margin-top:12px;">${prob.steps.map(s=>'· '+s).join('<br>')}</div>
+    <div class="acts" style="justify-content:flex-start;margin-top:12px;">${nextHtml}</div>`;
+}
+function newEstimate(){estCur=pick(EST_T)();estCur.opts=estOptions(estCur.ans);estChecked=false;estPick=null;renderEstimate();}
 function renderEstimate(){
   const box=document.getElementById('estBox'); if(!box)return;
   if(!estCur){newEstimate();return;}
   const st=estStats();
   box.innerHTML=`
     <div class="estq">${estCur.q}</div>
-    <div class="estunit">Ответ — <b>${estCur.unit}</b>. Попадание в диапазон ×2 от точного — зачёт: на интервью важен порядок величины, а не запятая.</div>
-    <div class="estrow"><input id="estInput" type="text" inputmode="decimal" placeholder="число — можно 150000 или 1.5e5">
-      <button class="primary" id="estCheckBtn">Проверить</button></div>
-    <div id="estOut"></div>
+    <div class="estunit">Прикинь в уме и выбери порядок величины — на интервью важна степень десятки, а не точная цифра.</div>
+    ${estOptsHtml(estCur,estChecked,estPick)}
+    ${estChecked?estStepsHtml(estCur,'<button class="primary" onclick="newEstimate()">Дальше →</button>'):''}
     <div class="note" style="margin-top:14px;">Серия: верно ${st.ok} из ${st.n}${st.n?` (${Math.round(st.ok/st.n*100)}%)`:''} · <button class="linkbtn" style="display:inline;width:auto;padding:0;" onclick="newEstimate()">другая задача ↻</button></div>`;
-  const inp=document.getElementById('estInput');
-  document.getElementById('estCheckBtn').onclick=checkEstimate;
-  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();estChecked?newEstimate():checkEstimate();}};
-  inp.focus();
-}
-function parseEst(v){v=String(v).trim().replace(/\s+/g,'').replace(',','.');const m=parseFloat(v);return isFinite(m)&&m>0?m:null;}
-function estVerdict(v,prob){
-  const ratio=v/prob.ans, ok=ratio>=0.5&&ratio<=2;
-  return {ok,html:`<div class="qsummary ${ok?'ok':'bad'}" style="margin-top:14px;text-align:left;">
-    <div class="big" style="font-size:22px;">${ok?'✓ Зачёт':'✗ Мимо'} <span style="font-size:14px;font-weight:600;">точный ответ: ${fmtAns(prob.ans)} ${prob.unit}</span></div>
-    <div class="eststeps">${prob.steps.map(s=>'· '+s).join('<br>')}</div>
-    <div class="acts" id="estActs" style="justify-content:flex-start;margin-top:12px;"></div></div>`};
-}
-function checkEstimate(){
-  if(estChecked)return;
-  const inp=document.getElementById('estInput');
-  const v=parseEst(inp.value);
-  if(v==null){inp.classList.add('bad');setTimeout(()=>inp.classList.remove('bad'),400);return;}
-  estChecked=true;
-  const r=estVerdict(v,estCur);
-  const st=estStats();st.n++;if(r.ok)st.ok++;localStorage.setItem(EST,JSON.stringify(st));
-  document.getElementById('estOut').innerHTML=r.html;
-  document.getElementById('estActs').innerHTML=`<button class="primary" onclick="newEstimate()">Дальше → <small>(Enter)</small></button>`;
+  if(!estChecked)box.querySelectorAll('.qopt').forEach(b=>b.onclick=()=>{
+    estPick=+b.dataset.i;estChecked=true;
+    const ok=estCur.opts[estPick].ok;
+    const s=estStats();s.n++;if(ok)s.ok++;localStorage.setItem(EST,JSON.stringify(s));
+    renderEstimate();
+  });
 }
 
 /* ==================== ТРЕНАЖЁР «КОНТРАКТЫ»: API + МОДЕЛЬ ДАННЫХ ==================== */
@@ -912,7 +917,7 @@ function adStore(){try{return JSON.parse(localStorage.getItem(ADS))||{api:{n:0,o
 function adSave(s){localStorage.setItem(ADS,JSON.stringify(s));}
 let adMode='api';
 let apiPool=[],apiCur=null,apiMethod=null,apiChecked=false;
-let dbTable=null,dbColsLeft=[],dbPhase=null,dbMiss=0,dbKeyIdx=0,dbKeyPicked=null;
+let dbTable=null,dbPhase=null,dbMiss=0,dbKeyIdx=0,dbKeyPicked=null;
 
 function renderApiDb(){
   const box=document.getElementById('adBox');if(!box)return;
@@ -927,65 +932,69 @@ function renderApiDb(){
 document.getElementById('adModeApi').onclick=()=>{adMode='api';renderApiDb();};
 document.getElementById('adModeDb').onclick=()=>{adMode='db';renderApiDb();};
 
-/* ---- дрилл 1: API-конструктор ---- */
+/* ---- дрилл 1: API-конструктор (всё кликами, без печати) ---- */
 const AD_METHODS=['GET','POST','PUT','DELETE','WS'];
+const AD_SEGPOOL=[...new Set(AD.API_TASKS.filter(t=>t.path).flatMap(t=>t.path.split('/').filter(Boolean)))];
+const AD_EVPOOL=[...new Set(AD.API_TASKS.filter(t=>t.method==='WS').map(t=>t.event))].concat(['message.send','chat.muted','user.blocked']);
+let apiSeq=[],apiPathChips=[],apiEvChips=[],apiEvPick=null;
+function normEvent(s){return String(s).toLowerCase().replace(/[^a-zа-я0-9]/g,'');}
+function apiPrepRound(t){
+  apiCur=t;apiMethod=null;apiChecked=false;apiSeq=[];apiEvPick=null;
+  const correct=(t.path||'').split('/').filter(Boolean);
+  const dis=shuffle(AD_SEGPOOL.filter(s=>!correct.includes(s))).slice(0,Math.max(4,10-correct.length));
+  apiPathChips=shuffle([...correct,...dis]);
+  const evCorrect=t.method==='WS'?t.event:null;
+  let pool=shuffle(AD_EVPOOL.filter(e=>e!==evCorrect)).slice(0,5);
+  if(t.evAccept&&!pool.includes('message.send'))pool[0]='message.send'; // дуальной задаче нужен валидный WS-вариант
+  apiEvChips=shuffle([...(evCorrect?[evCorrect]:[]),...pool]);
+}
 function apiNext(){
   if(!apiPool.length)apiPool=shuffle(AD.API_TASKS.map((t,i)=>i)); // цикл без повторов, пока пул не кончится
-  apiCur=AD.API_TASKS[apiPool.pop()];apiMethod=null;apiChecked=false;
+  apiPrepRound(AD.API_TASKS[apiPool.pop()]);
   renderApiDb();
 }
 function renderApiDrill(box){
   if(!apiCur){apiNext();return;}
   const st=adStore().api;
+  let work='';
+  if(!apiMethod)
+    work=`<div class="note" style="margin:8px 0 2px;">Выбери метод: для HTTP соберёшь путь из кусочков, для WS — выберешь событие.</div>`;
+  else if(apiMethod==='WS')
+    work=`<div class="pickgrid">${apiEvChips.map(e=>`<button class="pchip${apiEvPick===e?' on':''}" data-ev="${e}">${e}</button>`).join('')}</div>`;
+  else
+    work=`<div class="pathbuild">${apiSeq.length
+        ?apiSeq.map((s,i)=>`<span class="slash">/</span><button class="bseg" data-i="${i}" title="убрать">${s}</button>`).join('')
+        :'<span class="ph">путь соберётся здесь — клик по кусочку добавляет, клик по собранному убирает</span>'}</div>
+      <div class="pickgrid">${apiPathChips.map(s=>`<button class="pchip" data-seg="${s}"${apiSeq.includes(s)?' disabled':''}>/${s}</button>`).join('')}</div>`;
   box.innerHTML=`
     <div class="lab">API-конструктор · как клиент это запросит?</div>
     <div class="estq">${apiCur.task}</div>
     <div class="mrow">${AD_METHODS.map(m=>`<button class="mbtn${apiMethod===m?' on':''}" data-m="${m}">${m}</button>`).join('')}</div>
-    <div class="estrow"><input id="apiPath" type="text" autocomplete="off" spellcheck="false" placeholder="${apiMethod==='WS'?'имя события — например message.new':'путь — например /messages/{chat_id}'}">
-      <button class="primary" id="apiCheckBtn">Проверить</button></div>
+    ${work}
+    <div class="row" style="margin-top:10px;"><button class="primary" id="apiCheckBtn"${apiMethod?'':' disabled'}>Проверить</button></div>
     <div id="apiOut"></div>
     <div class="note" style="margin-top:14px;">Серия: верно ${st.ok} из ${st.n} · правило: «запросил один раз → HTTP; прилетает само → WS»</div>`;
-  box.querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{
-    if(apiChecked)return;
-    apiMethod=b.dataset.m;
-    box.querySelectorAll('.mbtn').forEach(x=>x.classList.toggle('on',x.dataset.m===apiMethod));
-    const inp=document.getElementById('apiPath');
-    inp.placeholder=apiMethod==='WS'?'имя события — например message.new':'путь — например /messages/{chat_id}';
-    inp.focus();
-  });
+  box.querySelectorAll('.mbtn').forEach(b=>b.onclick=()=>{if(apiChecked)return;apiMethod=b.dataset.m;renderApiDb();});
+  box.querySelectorAll('.pchip[data-seg]').forEach(b=>b.onclick=()=>{if(apiChecked)return;apiSeq.push(b.dataset.seg);renderApiDb();});
+  box.querySelectorAll('.bseg').forEach(b=>b.onclick=()=>{if(apiChecked)return;apiSeq.splice(+b.dataset.i,1);renderApiDb();});
+  box.querySelectorAll('.pchip[data-ev]').forEach(b=>b.onclick=()=>{if(apiChecked)return;apiEvPick=b.dataset.ev;renderApiDb();});
   document.getElementById('apiCheckBtn').onclick=apiCheck;
-  const inp=document.getElementById('apiPath');
-  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();apiChecked?apiNext():apiCheck();}};
-}
-function normPathSegs(p){
-  p=String(p).trim().toLowerCase().split('?')[0].replace(/\/+$/,'');
-  p=p.replace(/^https?:\/\/[^/]*/,'');
-  if(!p.startsWith('/'))p='/'+p;
-  p=p.replace(/^\/v\d+/,''); // версия в пути — гигиена, но не предмет проверки
-  return p.split('/').filter(Boolean).map(s=>{
-    if(/^[{<:\[$]/.test(s)||/[}>\]]$/.test(s))return '*'; // плейсхолдер в любом синтаксисе
-    return s.replace(/s$/,''); // messages ≈ message
-  });
-}
-function matchPath(input,canon){
-  const a=normPathSegs(input),b=normPathSegs(canon);
-  if(a.length!==b.length)return false;
-  return b.every((seg,i)=>seg==='*'||a[i]==='*'||seg===a[i]);
-}
-function normEvent(s){return String(s).toLowerCase().replace(/[^a-zа-я0-9]/g,'');}
-function matchEvent(input,t){
-  const v=normEvent(input);
-  return v===normEvent(t.event)||(t.evAlias||[]).includes(v);
 }
 function apiCheck(){
-  if(apiChecked||!apiCur)return;
-  const t=apiCur, inp=document.getElementById('apiPath'), v=(inp.value||'').trim();
-  if(!apiMethod){showToast('Сначала выбери метод');return;}
-  if(!v){inp.classList.add('bad');setTimeout(()=>inp.classList.remove('bad'),400);return;}
+  if(apiChecked||!apiCur||!apiMethod)return;
+  const t=apiCur;
+  if(apiMethod==='WS'&&!apiEvPick){showToast('Выбери событие');return;}
+  if(apiMethod!=='WS'&&!apiSeq.length){showToast('Собери путь из кусочков');return;}
   const okMethod=(apiMethod===t.method)||(t.methodAlt||[]).includes(apiMethod);
-  let okPath;
-  if(t.method==='WS') okPath=(apiMethod==='WS')&&matchEvent(v,t);
-  else okPath=matchPath(v,t.path)||(t.evAccept||[]).includes(normEvent(v));
+  let okPath,built;
+  if(apiMethod==='WS'){
+    built=apiEvPick;
+    okPath=t.method==='WS'?normEvent(apiEvPick)===normEvent(t.event):(t.evAccept||[]).includes(normEvent(apiEvPick));
+  }else{
+    built='/'+apiSeq.join('/');
+    const canon=(t.path||'').split('/').filter(Boolean);
+    okPath=canon.length>0&&apiSeq.length===canon.length&&canon.every((s,i)=>s===apiSeq[i]);
+  }
   const ok=okMethod&&okPath;
   apiChecked=true;
   const s=adStore();s.api.n++;if(ok)s.api.ok++;adSave(s);
@@ -999,20 +1008,26 @@ function apiCheck(){
       <div class="adcanon">${canon}</div>
       <div class="adfacts">
         ${okMethod?'':`<div>✗ Метод: ты выбрала <b>${apiMethod}</b>, нужен <b>${t.method}</b></div>`}
-        ${okPath?'':`<div>✗ ${t.method==='WS'?'Событие':'Путь'}: ты написала «${v}»</div>`}
+        ${okPath?'':`<div>✗ ${apiMethod==='WS'?'Событие':'Путь'}: у тебя получилось «${built}»</div>`}
         ${t.note?`<div>💡 ${t.note}</div>`:''}
         ${t.event&&t.method!=='WS'?`<div>📡 Ручка тянет событие: по WS уходит <b>${t.event}</b></div>`:''}
         ${t.tables?`<div>🗄 Трогает таблицы: <b>${t.tables.join(', ')}</b></div>`:''}
       </div>
-      <div class="acts" style="justify-content:flex-start;margin-top:12px;"><button class="primary" onclick="apiNext()">Дальше → <small>(Enter)</small></button></div>
+      <div class="acts" style="justify-content:flex-start;margin-top:12px;"><button class="primary" onclick="apiNext()">Дальше →</button></div>
     </div>`;
 }
 
-/* ---- дрилл 2: модель данных ---- */
+/* ---- дрилл 2: модель данных (мультивыбор столбцов, без печати) ---- */
+const AD_ALLCOLS=[...new Set(AD.TABLES.flatMap(t=>t.cols.map(c=>c.c)))];
+let dbChips=[],dbPicks=new Set(),dbColsChecked=false;
 function curTable(){return AD.TABLES.find(t=>t.name===dbTable);}
 function dbStart(name){
   dbTable=name;dbMiss=0;dbKeyIdx=0;dbKeyPicked=null;dbPhase='cols';
-  dbColsLeft=shuffle(curTable().cols.map(c=>c.c));
+  dbPicks=new Set();dbColsChecked=false;
+  const correct=curTable().cols.map(c=>c.c);
+  // подмешиваем реальные столбцы других таблиц — ловушки вида push_token в users
+  const dis=shuffle(AD_ALLCOLS.filter(c=>!correct.includes(c))).slice(0,Math.min(7,Math.max(4,12-correct.length)));
+  dbChips=shuffle([...correct,...dis]);
   renderApiDb();
 }
 function renderDbDrill(box){
@@ -1030,12 +1045,21 @@ function renderDbDrill(box){
 function dbBody(){
   const t=curTable();
   if(dbPhase==='cols'){
-    const got=t.cols.length-dbColsLeft.length;
-    return `<div class="estq" style="font-size:16px;">${t.name} — ${t.title.toLowerCase()}. Назови столбцы (${got} / ${t.cols.length}):</div>
-      <div class="estrow"><input id="dbColIn" autocomplete="off" spellcheck="false" placeholder="имя столбца — Enter после каждого">
-        <button class="ghost" id="dbGiveup">Показать (+${dbColsLeft.length})</button></div>
-      <div style="margin-top:10px;">${t.cols.filter(c=>!dbColsLeft.includes(c.c)).map(c=>`<span class="rchip">${c.c}</span>`).join('')}</div>
-      <div class="note" style="margin-top:10px;">Ошибок: <span id="dbMissN">${dbMiss}</span></div>`;
+    const correct=new Set(t.cols.map(c=>c.c));
+    const chips=dbChips.map(c=>{
+      let cls='pchip';
+      if(dbColsChecked){
+        if(correct.has(c))cls+=dbPicks.has(c)?' right':' missed';
+        else cls+=dbPicks.has(c)?' wrong':' faded';
+      } else if(dbPicks.has(c))cls+=' on';
+      return `<button class="${cls}" data-c="${c}">${c}</button>`;
+    }).join('');
+    return `<div class="estq" style="font-size:16px;">${t.name} — ${t.title.toLowerCase()}. Отметь её столбцы (${t.cols.length} шт.), чужие не трогай:</div>
+      <div class="pickgrid">${chips}</div>
+      ${dbColsChecked
+        ?`<div class="note">Жёлтое — пропустила, зачёркнутое — лишнее. Ошибок: <b>${dbMiss}</b></div>
+          <div class="acts" style="justify-content:flex-start;margin-top:10px;"><button class="primary" id="dbToKeys">К ключевым вопросам →</button></div>`
+        :`<div class="row" style="margin-top:6px;"><button class="primary" id="dbColsCheck">Проверить</button><span class="note">отмечено: ${dbPicks.size} / ${t.cols.length}</span></div>`}`;
   }
   if(dbPhase==='key'){
     const k=t.keys[dbKeyIdx];
@@ -1059,11 +1083,23 @@ function dbBody(){
       <button class="ghost" id="dbRedo">Эту заново</button></div></div>`;
 }
 function dbBind(box){
-  const inp=document.getElementById('dbColIn');
-  if(inp){
-    inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();dbTryCol(inp);}};
-    inp.focus();
-    document.getElementById('dbGiveup').onclick=()=>{dbMiss+=dbColsLeft.length;dbColsLeft=[];dbPhase='key';renderApiDb();};
+  if(dbPhase==='cols'){
+    box.querySelectorAll('.pchip[data-c]').forEach(b=>b.onclick=()=>{
+      if(dbColsChecked)return;
+      const c=b.dataset.c;
+      dbPicks.has(c)?dbPicks.delete(c):dbPicks.add(c);
+      renderApiDb();
+    });
+    const ck=document.getElementById('dbColsCheck');
+    if(ck)ck.onclick=()=>{
+      const correct=new Set(curTable().cols.map(c=>c.c));
+      let errs=0;
+      correct.forEach(c=>{if(!dbPicks.has(c))errs++;});
+      dbPicks.forEach(c=>{if(!correct.has(c))errs++;});
+      dbMiss+=errs;dbColsChecked=true;renderApiDb();
+    };
+    const tk=document.getElementById('dbToKeys');
+    if(tk)tk.onclick=()=>{dbPhase='key';renderApiDb();};
   }
   if(dbPhase==='key'){
     box.querySelectorAll('.qopt').forEach(b=>b.onclick=()=>{
@@ -1088,25 +1124,6 @@ function dbBind(box){
   const rd=document.getElementById('dbRedo');
   if(rd)rd.onclick=()=>dbStart(dbTable);
 }
-function dbTryCol(inp){
-  const v=normName(inp.value);if(v.length<2)return;
-  const t=curTable();
-  const hit=dbColsLeft.find(cn=>{
-    const col=t.cols.find(c=>c.c===cn);
-    const names=[normName(col.c),...(col.a||[]).map(normName)];
-    return names.includes(v)||names.includes(v+'id')||names.includes(v.replace(/id$/,''))||normName(col.c).replace(/id$/,'')===v;
-  });
-  if(hit){
-    dbColsLeft=dbColsLeft.filter(x=>x!==hit);
-    if(!dbColsLeft.length)dbPhase='key';
-    renderApiDb();
-  } else {
-    dbMiss++;
-    const n=document.getElementById('dbMissN');if(n)n.textContent=dbMiss;
-    inp.classList.add('bad');setTimeout(()=>inp.classList.remove('bad'),400);
-    inp.select();
-  }
-}
 function dbFinish(){
   dbPhase='done';
   const s=adStore();const prev=s.tables[dbTable]||{};
@@ -1121,7 +1138,8 @@ const IV_SECS={skeleton:['1','2','4'],reliab:['5','6','6A'],session:['3','7'],me
 function ivStart(short){
   IV.active=true;IV.t0=Date.now();IV.tEnd=0;IV.stage=0;IV.sub='est';
   IV.plan=LEVELS.slice(0,short?3:LEVELS.length).map(l=>l.id);
-  IV.estProb=pick(EST_T)();IV.estOk=null;IV.lastBuild=null;
+  IV.estProb=pick(EST_T)();IV.estProb.opts=estOptions(IV.estProb.ans);
+  IV.estOk=null;IV.estPickIdx=null;IV.lastBuild=null;
   IV.res={builds:[],ok:0,again:0};
   renderInterview();
 }
@@ -1149,16 +1167,13 @@ function renderInterview(){
   if(IV.sub==='est'){
     box.innerHTML=`<div class="ivpanel">${ivHead()}
       <h3>Разминка: оцени нагрузку</h3>
-      <p>Интервью почти всегда начинается с прикидки. Посчитай вслух, без калькулятора.</p>
+      <p>Интервью почти всегда начинается с прикидки. Прикинь в уме (вслух!) и выбери порядок величины.</p>
       <div class="estq">${IV.estProb.q}</div>
-      <div class="estunit">Ответ — <b>${IV.estProb.unit}</b>, попадание ×2 — зачёт.</div>
-      <div class="estrow"><input id="ivEstIn" type="text" inputmode="decimal" placeholder="число">
-        <button class="primary" id="ivEstBtn">Проверить</button></div>
-      <div id="ivEstOut"></div></div>`;
-    const inp=document.getElementById('ivEstIn');
-    document.getElementById('ivEstBtn').onclick=ivEstCheck;
-    inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();IV.estOk==null?ivEstCheck():ivNext();}};
-    inp.focus();
+      ${estOptsHtml(IV.estProb,IV.estOk!=null,IV.estPickIdx)}
+      ${IV.estOk!=null?estStepsHtml(IV.estProb,'<button class="primary" onclick="ivNext()">К доске →</button>'):''}</div>`;
+    if(IV.estOk==null)box.querySelectorAll('.qopt').forEach(b=>b.onclick=()=>{
+      IV.estPickIdx=+b.dataset.i;IV.estOk=IV.estProb.opts[IV.estPickIdx].ok;renderInterview();
+    });
     return;
   }
   if(IV.sub==='build'){
@@ -1206,16 +1221,6 @@ function renderInterview(){
     <div class="eststeps" style="font-family:'Archivo',sans-serif;">${buildRows}</div>
     <p style="margin-top:12px;"><b>${verdict}</b></p>
     <div class="row" style="margin-top:16px;"><button class="primary" onclick="ivFinish()">Готово</button></div></div>`;
-}
-function ivEstCheck(){
-  if(IV.estOk!=null)return;
-  const inp=document.getElementById('ivEstIn');
-  const v=parseEst(inp.value);
-  if(v==null){inp.classList.add('bad');setTimeout(()=>inp.classList.remove('bad'),400);return;}
-  const r=estVerdict(v,IV.estProb);
-  IV.estOk=r.ok;
-  document.getElementById('ivEstOut').innerHTML=r.html;
-  document.getElementById('estActs').innerHTML=`<button class="primary" onclick="ivNext()">К доске → <small>(Enter)</small></button>`;
 }
 function ivNext(){if(IV.sub==='est'){IV.sub='build';renderInterview();}}
 function ivOpenBuild(){curLevel=IV.stage;goTab('build');startLevel(true);}

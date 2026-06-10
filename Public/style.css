@@ -407,3 +407,20 @@ html[data-theme="dark"] .mbtn.on{color:#0b0e14;}
 .tchip{font-family:'Space Mono',monospace;font-size:12.5px;font-weight:700;padding:7px 12px;}
 .tchip.on{border-color:var(--edge);background:var(--accentbg);}
 .tchip.done{color:var(--oktext);}
+
+/* ====== кликабельные чипы (выбор/сборка без печати) ====== */
+.pickgrid{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0;}
+.pchip{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;padding:8px 12px;background:var(--bg2);border:1px solid var(--line);border-radius:9px;color:var(--ink);transition:.12s;}
+.pchip.arch{font-family:'Archivo',sans-serif;}
+.pchip:hover{border-color:var(--edge);}
+.pchip.on{background:var(--accentbg);border-color:var(--edge);box-shadow:0 0 0 1px var(--edge) inset;}
+.pchip.right{background:var(--okbg);border-color:var(--good);color:var(--oktext);}
+.pchip.wrong{background:var(--badbg);border-color:var(--bad);color:var(--badtext);text-decoration:line-through;}
+.pchip.missed{background:var(--warnbg);border-color:var(--warnline);color:var(--warntext);}
+.pchip.faded{opacity:.4;}
+.pchip:disabled{opacity:.3;cursor:default;}
+.pathbuild{font-family:'Space Mono',monospace;font-size:14.5px;background:var(--bg2);border:1px dashed var(--line);border-radius:9px;padding:9px 12px;min-height:42px;display:flex;align-items:center;flex-wrap:wrap;gap:3px;margin-bottom:8px;}
+.pathbuild .bseg{cursor:pointer;background:var(--accentbg);border:1px solid var(--accentline);border-radius:6px;padding:2px 8px;font-family:'Space Mono',monospace;font-size:13.5px;font-weight:700;color:var(--ink);}
+.pathbuild .bseg:hover{border-color:var(--bad);text-decoration:line-through;}
+.pathbuild .slash{color:var(--muted2);font-weight:700;}
+.pathbuild .ph{color:var(--muted2);font-size:12.5px;font-style:italic;}
