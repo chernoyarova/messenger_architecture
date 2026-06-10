@@ -11,14 +11,16 @@
   body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,'SF Pro Text','Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
   .wrap{max-width:1240px;margin:0 auto;padding:0 16px 60px;}
 
-  header.top{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
-    padding:11px 0;margin-bottom:20px;background:var(--topbg);backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);border-bottom:1px solid var(--line);}
+  header.top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+    padding:22px 0 6px;margin-bottom:22px;background:transparent;border:none;}
   .brand{display:flex;align-items:center;gap:9px;}
   .brand .dot{width:11px;height:11px;border-radius:3px;background:var(--edge);box-shadow:0 0 9px var(--edge);}
   .brand h1{font-size:16px;font-weight:800;letter-spacing:-.2px;margin:0;white-space:nowrap;}
   @media(max-width:560px){.brand h1{display:none;}}
 
-  .tabs{display:flex;gap:5px;flex-wrap:wrap;}
+  .tabs{display:flex;gap:2px;flex-wrap:wrap;padding:5px;border-radius:999px;
+    background:var(--glass);border:1px solid var(--glassline);box-shadow:var(--shadow);
+    backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);}
   .tab{display:flex;align-items:center;gap:7px;font-weight:600;font-size:13.5px;color:var(--muted);background:transparent;border:1px solid transparent;border-radius:999px;padding:8px 16px;cursor:pointer;transition:.15s;}
   .tab:hover{color:var(--ink);background:var(--bg2);}
   .tab.on{color:#fff;background:var(--accgrad);font-weight:600;box-shadow:0 6px 16px rgba(90,156,224,.30);}
@@ -450,7 +452,8 @@ html[data-theme="dark"] body::after{background:
 .brand{cursor:pointer;}
 .brand .logo{width:30px;height:30px;border-radius:10px;background:var(--accgrad);display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 6px 14px rgba(90,156,224,.35);flex:none;}
 .brand h1{font-size:15.5px;font-weight:700;letter-spacing:-.01em;}
-.iconbtn{display:flex;align-items:center;justify-content:center;border-radius:50%;width:36px;height:36px;padding:0;}
+.iconbtn{display:flex;align-items:center;justify-content:center;border-radius:50%;width:40px;height:40px;padding:0;}
+  header.top .iconbtn{background:var(--glass);border:1px solid var(--glassline);box-shadow:var(--shadow);backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);}
 .tab svg,.pseg svg,.pcard .ic svg,.stat-tile .ic svg{flex:none;display:block;}
 
 /* сегменты раздела «Практика» */
