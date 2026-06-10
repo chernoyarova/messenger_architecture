@@ -183,10 +183,14 @@
   .ccol .bar i{display:block;height:100%;background:var(--accgrad);border-radius:2px;transition:.45s;}
   .ccol button{border-radius:999px;padding:8px 18px;font-size:13px;background:var(--bg2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
   .ccol button:hover{border-color:var(--edge);color:var(--edge);}
-  .cabtools{display:flex;gap:10px;justify-content:center;margin-top:48px;}
-  .cabtools .iconbtn{background:var(--glass);border:1px solid var(--glassline);box-shadow:var(--shadow);color:var(--muted);backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);}
-  .cabtools .iconbtn:hover{color:var(--ink);border-color:var(--edge);}
-  .cabtools .iconbtn.danger:hover{color:var(--bad);border-color:var(--bad);}
+  /* данные: экспорт/импорт парой с пояснением, сброс — отдельно и в стороне */
+  .cabdata{display:flex;flex-direction:column;align-items:center;gap:9px;margin-top:48px;}
+  .cabdata .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;}
+  .pillbtn{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:8px 17px;font-size:13px;background:var(--bg2);border:1px solid var(--glassline);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
+  .pillbtn:hover{border-color:var(--edge);color:var(--edge);}
+  .cabdata .cap{font-size:12px;color:var(--muted2);text-align:center;max-width:52ch;line-height:1.5;}
+  .resetlink{margin-top:16px;background:none;border:none;padding:4px 8px;font-size:12.5px;color:var(--muted2);cursor:pointer;}
+  .resetlink:hover{color:var(--bad);background:none;border:none;}
 
   /* ====== MAP (native) ====== */
   .mapgrid{display:grid;grid-template-columns:1fr 332px;gap:14px;align-items:start;}
@@ -542,8 +546,11 @@ html[data-theme="dark"] .phone{background:linear-gradient(165deg,#101727 0%,#0D1
 .landcta p{margin:0 0 20px;font-size:14px;color:var(--muted);}
 .landcta .primary{padding:13px 30px;font-size:15px;border-radius:999px;}
 .landsign{margin-top:26px;text-align:center;font-size:13px;color:var(--muted2);line-height:1.6;}
+.landsign+.landsign{margin-top:8px;}
 .landsign a{color:var(--edge);font-weight:600;text-decoration:none;}
 .landsign a:hover{text-decoration:underline;}
+.landsign .linkbtn{display:inline;width:auto;padding:0;margin:0;font-size:13px;color:var(--edge);font-weight:600;background:none;border:none;cursor:pointer;}
+.landsign .linkbtn:hover{text-decoration:underline;}
 
 /* ====== ЛЁГКОСТЬ: рамки только там, где они несут смысл ====== */
 button{border-color:transparent;}

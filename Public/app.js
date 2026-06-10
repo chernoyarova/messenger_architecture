@@ -875,6 +875,7 @@ function renderLanding(box){
     <button class="primary" onclick="continueCourse()">Начать курс</button>
   </div>
   <div class="landsign">Курс и тренажёры делаю я — <a href="https://t.me/monrech" target="_blank" rel="noopener">@monrech</a>, готовясь к своим system design собеседованиям. Замечания и идеи — пиши.</div>
+  <div class="landsign">Занималась раньше на другом устройстве? <button class="linkbtn" onclick="document.getElementById('importFile').click()">Импортировать прогресс</button></div>
   `;
 }
 function renderCabinet(box){
@@ -925,9 +926,13 @@ function renderCabinet(box){
       </div>
     </div>
     <div class="cabcols">${cols}</div>
-    <div class="cabtools">
-      <button class="iconbtn" title="Экспорт прогресса" onclick="exportProgress()">${icon('download',16)}</button>
-      <button class="iconbtn danger" title="Сбросить весь прогресс" onclick="resetAll()">${icon('rotate',16)}</button>
+    <div class="cabdata">
+      <div class="row">
+        <button class="pillbtn" onclick="exportProgress()">${icon('download',14)} Экспорт</button>
+        <button class="pillbtn" onclick="document.getElementById('importFile').click()">${icon('upload',14)} Импорт</button>
+      </div>
+      <div class="cap">Прогресс хранится в этом браузере. Экспорт скачивает копию файлом — забирай её при переезде на другое устройство и восстанавливай через импорт.</div>
+      <button class="resetlink" onclick="resetAll()">Сбросить весь прогресс…</button>
     </div>`;
 }
 function continueCourse(){
@@ -959,7 +964,13 @@ function importProgress(file){
   r.readAsText(file);
 }
 function resetAll(){
-  if(!confirm('Сбросить ВЕСЬ прогресс — пройденные разделы курса, собранные уровни схемы и карточки? Действие необратимо.'))return;
+  const st=pillarStats();
+  if(!confirm('Сброс удалит весь прогресс:\n'
+    +'· разделов пройдено: '+st.passed+' из '+st.totalSec+'\n'
+    +'· времени в тренажёре: '+fmtTime(_timeAcc)+'\n'
+    +'· уровней схемы: '+st.lvlsDone+', повторов карточек: '+gradesCount()+'\n\n'
+    +'Файл с копией прогресса сейчас скачается автоматически — через «Импорт» из него можно всё восстановить.\n\nСбросить?'))return;
+  exportProgress(); // страховка от случайного сброса: копия уезжает в загрузки до очистки
   PROGRESS_KEYS.forEach(k=>localStorage.removeItem(k));_timeAcc=0;
   queue=[];qPos=0;secSel='all';curLevel=0;startLevel(true);renderCardsSide();renderToc();renderDashboard();
   if(curDoc&&curDoc.startsWith('sec:'))renderQuiz(curDoc.slice(4));
