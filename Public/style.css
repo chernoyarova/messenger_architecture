@@ -255,7 +255,8 @@
   .servlabel{fill:var(--muted2);font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;}
 
   /* ====== COURSE ====== */
-  .coursegrid{display:grid;grid-template-columns:300px 1fr;gap:14px;align-items:start;}
+  /* грид курса уже общего контейнера: текст заполняет ридер целиком, а строка остаётся читаемой (~80 знаков) */
+  .coursegrid{display:grid;grid-template-columns:300px 1fr;gap:14px;align-items:start;max-width:1100px;margin:0 auto;}
   @media(max-width:860px){.coursegrid{grid-template-columns:1fr;}}
   .toc{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;position:sticky;top:12px;max-height:88vh;overflow:auto;}
   .toc .part{font-size:10px;letter-spacing:.6px;color:var(--muted2);text-transform:uppercase;font-weight:700;margin:14px 6px 6px;}
@@ -272,7 +273,7 @@
   .reader{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px 32px;min-height:300px;}
   .reader .rmeta{font-size:11px;letter-spacing:.6px;color:var(--muted2);text-transform:uppercase;font-weight:700;margin-bottom:6px;}
   .reader h1.rt{font-size:26px;font-weight:900;margin:0 0 18px;line-height:1.15;}
-  .md{font-size:15.5px;line-height:1.68;color:var(--mdtext);max-width:720px;}
+  .md{font-size:15.5px;line-height:1.68;color:var(--mdtext);}
   .md h2{font-size:19px;font-weight:800;margin:26px 0 10px;color:var(--ink);border-bottom:1px solid var(--line2);padding-bottom:6px;}
   .md h3{font-size:16px;font-weight:700;margin:20px 0 8px;color:var(--ink);}
   .md h4{font-size:14px;font-weight:700;margin:16px 0 6px;color:var(--muted);}
@@ -290,7 +291,7 @@
   .rnav .grow{flex:1;}
 
   /* ====== QUIZ ====== */
-  .quiz{margin-top:30px;padding-top:22px;border-top:2px solid var(--line);max-width:720px;}
+  .quiz{margin-top:30px;padding-top:22px;border-top:2px solid var(--line);}
   .quiz.checked .qopt{pointer-events:none;}
   .quizhead h2{font-size:19px;font-weight:800;margin:0;}
   .quizsub{color:var(--muted);font-size:13px;margin:5px 0 16px;}
