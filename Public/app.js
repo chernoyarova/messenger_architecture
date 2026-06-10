@@ -14,8 +14,8 @@ const LAYERS = {
    F5 и кнопка «назад» возвращают на то же место, разделом можно поделиться ссылкой. */
 let lastAppliedHash=null;
 function setHash(h){ lastAppliedHash=h; if(location.hash!==h) location.hash=h; }
-function hashForDoc(doc){ // doc = 'sec:6A' | 'ref:ws'
-  if(!doc) return '#course';
+function hashForDoc(doc){ // doc = 'intro' | 'sec:6A' | 'ref:ws'
+  if(!doc||doc==='intro') return '#course';
   return doc.startsWith('ref:') ? '#course/ref/'+encodeURIComponent(doc.slice(4))
                                 : '#course/'+encodeURIComponent(doc.slice(4));
 }
@@ -25,7 +25,7 @@ function goTab(name,opts){
   document.getElementById('view-'+name).classList.add('on');
   if(name==='cards') renderCardsSide();
   if(name==='home') renderDashboard();
-  if(name==='course') renderToc();
+  if(name==='course'){renderToc();if(!curDoc)openIntro({noHash:true});}
   if(name==='estimate') renderEstimate();
   if(name==='interview') renderInterview();
   if(!(opts&&opts.noHash)) setHash(name==='course'?hashForDoc(curDoc):'#'+name);
@@ -41,6 +41,7 @@ function applyHash(){
     goTab('course',{noHash:true});
     if(parts[1]==='ref'&&parts[2]) openRef(parts[2],{noHash:true});
     else if(parts[1]) openSection(parts[1],{noHash:true});
+    else openIntro({noHash:true}); // голый #course — вводная «что тебя ждёт»
   } else if(['home','build','cards','map','estimate','interview'].includes(tab)) goTab(tab,{noHash:true});
   else goTab('home',{noHash:true});
 }
@@ -555,6 +556,11 @@ let curDoc=null;
 
 function renderToc(){
   const toc=document.getElementById('toc');toc.innerHTML='';
+  const ib=document.createElement('button');
+  ib.className='ti'+(curDoc==='intro'?' on':'');
+  ib.innerHTML='<span class="n">🧭</span><span class="tt">О курсе · что тебя ждёт</span>';
+  ib.onclick=()=>openIntro();
+  toc.appendChild(ib);
   COURSE.parts.forEach(p=>{
     const h=document.createElement('div');h.className='part';h.textContent=p.part;toc.appendChild(h);
     p.secs.forEach(n=>{
@@ -601,6 +607,34 @@ function navButtons(key){
   return h;
 }
 function openDoc(type,key){type==='sec'?openSection(key):openRef(key);}
+function openIntro(opts){
+  curDoc='intro';
+  if(!(opts&&opts.noHash)) setHash('#course');
+  const secNums=Object.keys(COURSE.sections);
+  const passed=secNums.filter(n=>secPassed(n)).length;
+  const partsHtml=COURSE.parts.map((p,pi)=>{
+    const desc=(COURSE.partsIntro||[])[pi]||'';
+    const secs=p.secs.map(n=>{
+      const s=COURSE.sections[String(n)];if(!s)return '';
+      return `<button class="introsec${secPassed(n)?' done':''}" onclick="openSection('${n}')"><b>${n}</b>${s.title}</button>`;
+    }).join('');
+    return `<div class="intropart"><h3>${p.part}</h3><p>${desc}</p><div class="introsecs">${secs}</div></div>`;
+  }).join('');
+  const startBtn=passed?`Продолжить курс → (пройдено ${passed} / ${secNums.length})`:'Начать с раздела 1 →';
+  document.getElementById('reader').innerHTML=`
+    <div class="rmeta">Курс</div>
+    <h1 class="rt">Что тебя ждёт в курсе</h1>
+    <div class="md">
+      <p><b>${secNums.length} разделов в шести частях</b> — от «что такое мессенджер с точки зрения архитектуры» до групповых звонков и их шифрования. Курс выстроен так, как развивается ответ на интервью: сначала скелет и доставка одного сообщения, потом хранение, масштаб, безопасность и реальное время. Каждый раздел опирается на предыдущие — читай по порядку.</p>
+      <p><b>Как заниматься.</b> Прочитай раздел → сдай тест в конце на 6/6 (варианты перемешиваются, зубрить буквы бесполезно) → если завалила, карточки раздела сами встанут к повтору. Раз в пару разделов заглядывай в «🧩 Собери схему» — то, что прочитано, должно рисоваться рукой. Финальная проверка — «🎤 Прогон»: вся схема плюс вопросы вслух на время.</p>
+      <p>Внизу оглавления лежит <b>справка по сетям</b> (TCP, сокеты, WebSocket, уровни L4/L7) — она не входит в зачёт, открывай её как словарик, когда встречаешь незнакомый термин.</p>
+    </div>
+    <div class="introprog"><div class="bar"><i style="width:${secNums.length?Math.round(passed/secNums.length*100):0}%"></i></div><span>${passed} / ${secNums.length} разделов пройдено</span></div>
+    ${partsHtml}
+    <div class="rnav"><span class="grow"></span><button class="primary" onclick="continueCourse()">${startBtn}</button></div>`;
+  renderToc();
+  window.scrollTo(0,0);
+}
 function openSection(n,opts){
   n=String(n);const s=COURSE.sections[n];if(!s)return;
   curDoc='sec:'+n;

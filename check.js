@@ -22,6 +22,8 @@ Object.keys(COURSE.sections).forEach(s => {
   if (!sec.title || !sec.md) err(`Курс: раздел ${s} без title или md`);
 });
 (COURSE.refs || []).forEach(r => { if (!r.id || !r.title || !r.md) err(`Справка: запись без id/title/md: ${JSON.stringify(r).slice(0, 60)}`); });
+if (!COURSE.partsIntro || COURSE.partsIntro.length !== COURSE.parts.length)
+  err(`Курс: partsIntro (${(COURSE.partsIntro || []).length}) не совпадает с числом частей (${COURSE.parts.length}) — вводная «О курсе» потеряет описания`);
 
 /* ---- 2. Тесты ---- */
 partSecs.forEach(s => {
