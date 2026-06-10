@@ -935,7 +935,12 @@ function renderCabinet(box){
     </div>
     <div class="landfoot">Обратная связь — <a href="https://t.me/monrech" target="_blank" rel="noopener">${icon('send',12)} @monrech</a></div>`;
 }
-function continueCourse(){const nx=courseOrder().find(x=>x.type==='sec'&&!secPassed(x.key))||courseOrder()[0];goTab('course');openDoc(nx.type,nx.key);}
+function continueCourse(){
+  goTab('course');
+  if(!Object.keys(testStore()).length){openIntro();return;} // курс ещё не начат — сначала «О курсе», а не сразу раздел 1
+  const nx=courseOrder().find(x=>x.type==='sec'&&!secPassed(x.key))||courseOrder()[0];
+  openDoc(nx.type,nx.key);
+}
 function startCards(){goTab('cards');document.getElementById('btnStudy').click();}
 /* ---- экспорт / импорт / сброс прогресса ---- */
 const PROGRESS_KEYS=[READ,SR,SR_V1,BSTORE,TST,BLVL,BTIME,BDAYS,BGRADES,'msg_est_v1','msg_apidb_v1'];
