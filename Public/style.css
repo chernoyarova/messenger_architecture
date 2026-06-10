@@ -478,14 +478,14 @@ html[data-theme="dark"] body::after{background:
 .landing .ctas .ghosty{padding:13px 22px;font-size:14.5px;border-radius:999px;background:var(--bg2);border:1px solid var(--glassline);backdrop-filter:blur(10px);}
 .factrow{display:flex;gap:14px;flex-wrap:wrap;font-family:'Space Mono',monospace;font-size:12px;color:var(--muted2);}
 .factrow b{color:var(--edge);font-weight:700;}
-.blocks3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:34px;}
-@media(max-width:840px){.blocks3{grid-template-columns:1fr;}}
-.block3{background:var(--glass);border:1px solid var(--glassline);border-radius:20px;padding:22px;backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);box-shadow:var(--shadow);display:flex;flex-direction:column;cursor:pointer;transition:.2s;}
-.block3:hover{transform:translateY(-3px);box-shadow:0 24px 56px rgba(30,34,64,.16);}
-.block3 .bic{width:44px;height:44px;border-radius:14px;background:var(--accgrad);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(90,156,224,.32);margin-bottom:14px;}
-.block3 h3{margin:0 0 6px;font-size:18px;font-weight:700;letter-spacing:-.01em;}
-.block3 p{margin:0 0 16px;font-size:13.5px;line-height:1.55;color:var(--muted);flex:1;}
-.block3 .go{font-size:13.5px;font-weight:600;color:var(--edge);display:flex;align-items:center;gap:6px;}
+.blocks3{display:grid;grid-template-columns:repeat(3,1fr);gap:44px;margin-top:52px;}
+@media(max-width:840px){.blocks3{grid-template-columns:1fr;gap:30px;}}
+.b3{display:flex;flex-direction:column;align-items:flex-start;}
+.b3 h3{display:flex;align-items:center;gap:9px;margin:0 0 8px;font-size:18px;font-weight:700;letter-spacing:-.01em;color:var(--ink);}
+.b3 h3 svg{color:var(--edge);flex:none;}
+.b3 p{margin:0 0 16px;font-size:14px;line-height:1.6;color:var(--muted);flex:1;}
+.b3 button{border-radius:999px;padding:9px 20px;font-size:13.5px;background:var(--bg2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
+.b3 button:hover{border-color:var(--edge);color:var(--edge);}
 
 /* телефон-мокап */
 .phone{position:relative;width:312px;height:584px;border-radius:40px;overflow:hidden;margin:0;
@@ -518,9 +518,8 @@ html[data-theme="dark"] .phone{background:linear-gradient(165deg,#101727 0%,#0D1
 .ph-input .fld{flex:1;height:36px;border-radius:18px;background:var(--bg2);border:1px solid var(--glassline);display:flex;align-items:center;padding:0 14px;font-size:13px;color:var(--muted2);}
 @media (prefers-reduced-motion: reduce){.ph-msg,.ph-typing{animation:none!important;opacity:1!important;transform:none!important;}.ph-typing i{animation:none!important;}}
 
-/* бейдж бесплатности на лендинге */
-.freechip{display:inline-flex;align-items:center;gap:8px;background:var(--okbg);color:var(--oktext);border-radius:999px;padding:7px 15px;font-size:12.5px;font-weight:600;margin-bottom:16px;}
-.freechip::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 8px var(--good);}
+/* текстовый kicker над заголовком лендинга */
+.kicker{display:block;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--edge);margin-bottom:14px;}
 
 /* ====== ЛЁГКОСТЬ: рамки только там, где они несут смысл ====== */
 button{border-color:transparent;}

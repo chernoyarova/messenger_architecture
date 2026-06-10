@@ -831,7 +831,7 @@ function renderLanding(box){
   box.innerHTML=`
   <div class="landing">
     <div>
-      <div class="freechip">Полностью бесплатно · без регистрации и подписок</div>
+      <span class="kicker">Бесплатно · без регистрации · открытый код</span>
       <h2>Спроектируй мессенджер.<br>Пройди интервью <b>уверенно</b>.</h2>
       <p class="sub">Курс по архитектуре мессенджера и пять тренажёров, которые учат не узнавать, а воспроизводить: схему — рукой, контракты — по памяти, ответы — вслух. Открой и занимайся: никаких аккаунтов, прогресс хранится в твоём браузере.</p>
       <div class="ctas">
@@ -850,20 +850,20 @@ function renderLanding(box){
     </div>
   </div>
   <div class="blocks3">
-    <div class="block3" onclick="goTab('course')">
-      <div class="bic">${icon('book',20)}</div><h3>Курс</h3>
+    <div class="b3">
+      <h3>${icon('book',18)} Курс</h3>
       <p>26 разделов — от «что такое мессенджер архитектурно» до E2EE и звонков. После каждого тест: раздел засчитан при 6 из 6.</p>
-      <span class="go">Читать курс ${icon('arrow',14)}</span>
+      <button onclick="goTab('course')">Читать курс →</button>
     </div>
-    <div class="block3" onclick="goTab('practice')">
-      <div class="bic">${icon('dumbbell',20)}</div><h3>Практика</h3>
+    <div class="b3">
+      <h3>${icon('dumbbell',18)} Практика</h3>
       <p>Пять тренажёров: собери схему по памяти, восстанови API и таблицы, карточки с интервальными повторами, прикидки и прогон интервью.</p>
-      <span class="go">Тренироваться ${icon('arrow',14)}</span>
+      <button onclick="goTab('practice')">Тренироваться →</button>
     </div>
-    <div class="block3" onclick="goTab('map')">
-      <div class="bic">${icon('compass',20)}</div><h3>Карта</h3>
+    <div class="b3">
+      <h3>${icon('compass',18)} Карта</h3>
       <p>Живая схема системы: 21 компонент с объяснениями и 15 пошаговых сценариев — от доставки сообщения до группового звонка.</p>
-      <span class="go">Изучать карту ${icon('arrow',14)}</span>
+      <button onclick="goTab('map')">Открыть карту →</button>
     </div>
   </div>
   <div style="text-align:center;margin-top:26px;"><button class="linkbtn" style="display:inline-block;width:auto;" onclick="document.getElementById('importFile').click()">У меня есть файл прогресса — импортировать</button></div>`;
