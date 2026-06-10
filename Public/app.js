@@ -868,7 +868,7 @@ function renderLanding(box){
       <button onclick="goTab('map')">Открыть карту →</button>
     </div>
   </div>
-  <div class="landfoot">Было полезно? Напиши автору — <a href="https://t.me/monrech" target="_blank" rel="noopener">${icon('send',12)} @monrech</a><i>·</i><button class="linkbtn" onclick="document.getElementById('importFile').click()">импортировать прогресс</button></div>`;
+  <div class="landfoot">Было полезно? Напиши автору — <a href="https://t.me/monrech" target="_blank" rel="noopener">${icon('send',12)} @monrech</a><i>·</i><button class="linkbtn" onclick="document.getElementById('importFile').click()">импортировать прогресс</button><i>·</i><a href="course/index.html" style="font-weight:500;color:var(--muted2);">текстовая версия курса</a></div>`;
 }
 function renderCabinet(box){
   markActive();
