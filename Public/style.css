@@ -11,8 +11,11 @@
   body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,'SF Pro Text','Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
   .wrap{max-width:1240px;margin:0 auto;padding:0 16px 60px;}
 
-  header.top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  header.top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;
     padding:22px 0 6px;margin-bottom:22px;background:transparent;border:none;}
+  header.top .brand{justify-self:start;}
+  header.top .iconbtn{justify-self:end;}
+  @media(max-width:760px){header.top{grid-template-columns:auto 1fr auto;}header.top .tabs{justify-self:center;}}
   .brand{display:flex;align-items:center;gap:9px;}
   .brand .dot{width:11px;height:11px;border-radius:3px;background:var(--edge);box-shadow:0 0 9px var(--edge);}
   .brand h1{font-size:16px;font-weight:800;letter-spacing:-.2px;margin:0;white-space:nowrap;}
@@ -465,8 +468,8 @@ html[data-theme="dark"] body::after{background:
 .pview.on{display:block;}
 
 /* ============ ГЛАВНАЯ: лендинг ============ */
-.landing{display:grid;grid-template-columns:1.05fr .95fr;gap:44px;align-items:center;padding:26px 8px 10px;}
-@media(max-width:940px){.landing{grid-template-columns:1fr;gap:28px;}}
+.landing{display:grid;grid-template-columns:1fr auto;gap:56px;align-items:center;padding:26px 0 10px;}
+@media(max-width:940px){.landing{grid-template-columns:1fr;gap:28px;}.phone{margin:0 auto;}}
 .landing h2{font-size:clamp(30px,4.6vw,44px);font-weight:800;letter-spacing:-.03em;line-height:1.08;margin:0 0 16px;}
 .landing h2 b{background:var(--accgrad);-webkit-background-clip:text;background-clip:text;color:transparent;}
 .landing .sub{font-size:16px;line-height:1.6;color:var(--muted);max-width:50ch;margin:0 0 22px;}
@@ -485,7 +488,7 @@ html[data-theme="dark"] body::after{background:
 .block3 .go{font-size:13.5px;font-weight:600;color:var(--edge);display:flex;align-items:center;gap:6px;}
 
 /* телефон-мокап */
-.phone{position:relative;width:312px;height:584px;border-radius:40px;overflow:hidden;margin:0 auto;
+.phone{position:relative;width:312px;height:584px;border-radius:40px;overflow:hidden;margin:0;
   background:linear-gradient(165deg,#E9F0FA 0%,#E6F3FA 42%,#FDFDFF 100%);
   box-shadow:0 24px 60px rgba(30,34,64,.16),0 0 0 1px rgba(255,255,255,.6) inset;}
 html[data-theme="dark"] .phone{background:linear-gradient(165deg,#101727 0%,#0D1320 45%,#151E33 100%);box-shadow:0 24px 60px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.08) inset;}
@@ -514,3 +517,19 @@ html[data-theme="dark"] .phone{background:linear-gradient(165deg,#101727 0%,#0D1
   background:var(--topbg);backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);border-top:1px solid var(--glassline);}
 .ph-input .fld{flex:1;height:36px;border-radius:18px;background:var(--bg2);border:1px solid var(--glassline);display:flex;align-items:center;padding:0 14px;font-size:13px;color:var(--muted2);}
 @media (prefers-reduced-motion: reduce){.ph-msg,.ph-typing{animation:none!important;opacity:1!important;transform:none!important;}.ph-typing i{animation:none!important;}}
+
+/* бейдж бесплатности на лендинге */
+.freechip{display:inline-flex;align-items:center;gap:8px;background:var(--okbg);color:var(--oktext);border-radius:999px;padding:7px 15px;font-size:12.5px;font-weight:600;margin-bottom:16px;}
+.freechip::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 8px var(--good);}
+
+/* ====== ЛЁГКОСТЬ: рамки только там, где они несут смысл ====== */
+button{border-color:transparent;}
+.pill,.chip,.toc .ti,.qopt,.introsec,.pchip,.flash .secpill,.selsec,.lvlSelect,.scnSelect,
+.estrow input,#recallInput,.pseg,.adpill,.mbtn,.tchip,.rchip,.qexp,.stat-tile,.pillrow .pill,
+.scnpick,.capdots .dot{border-color:transparent;}
+.pbar,.pcard .bar,.introprog .bar{border:none;}
+.heat .cell{border:none;}
+.capbar{border-color:transparent;border-left:3px solid var(--edge);}
+.capbar.rtc{border-left-color:var(--rtc);}
+.estrow input:focus,#recallInput:focus{outline:none;border-color:var(--edge);}
+.md th,.md td{border-color:var(--line2);}
