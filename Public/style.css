@@ -539,3 +539,10 @@ button{border-color:transparent;}
 .landfoot a:hover{text-decoration:underline;}
 .landfoot i{font-style:normal;color:var(--muted2);}
 .landfoot .linkbtn{display:inline;width:auto;padding:0;margin:0;font-size:13px;}
+
+.appfoot{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:48px;padding-top:22px;border-top:1px solid var(--line);font-size:13px;color:var(--muted2);}
+.appfoot a{display:inline-flex;align-items:center;gap:5px;color:var(--edge);font-weight:600;text-decoration:none;}
+.appfoot a:hover{text-decoration:underline;}
+.appfoot i{font-style:normal;color:var(--muted2);}
+.appfoot .linkbtn{display:inline;width:auto;padding:0;margin:0;font-size:13px;color:var(--edge);font-weight:600;}
+.appfoot .linkbtn:hover{text-decoration:underline;}
