@@ -596,6 +596,9 @@ function secPassed(n){const c=testCount(n);return c!=null&&c>=testTotal(n);}
 function secFrac(n){const c=testCount(n);return c==null?0:Math.min(1,c/testTotal(n));}
 function saveTest(n,score){const s=testStore();const k=String(n);if(score>(s[k]||0))s[k]=score;localStorage.setItem(TST,JSON.stringify(s));}
 
+// номерные разделы — основной счёт курса; буквенные (2A, 3A…) — дополнения, в счёт не идут
+function mainSecNums(){return Object.keys(COURSE.sections).filter(n=>/^\d+$/.test(n));}
+function pluralSec(n){const a=n%10,b=n%100;if(a===1&&b!==11)return 'раздел';if(a>=2&&a<=4&&(b<10||b>=20))return 'раздела';return 'разделов';}
 // плоский порядок для навигации пред/след
 function courseOrder(){
   const o=[];
@@ -650,10 +653,6 @@ function navButtons(key){
   let h='';
   if(i>0){const p=ord[i-1];h+=`<button class="ghost" onclick="openDoc('${p.type}','${p.key}')">← Назад</button>`;}
   h+='<span class="grow"></span>';
-  if(key.startsWith('sec:')){
-    const n=key.slice(4);const cnt=(window.QUESTIONS||[]).filter(c=>String(c.sec)===n).length;
-    if(cnt)h+=`<button class="ghost" onclick="studySection('${n}')">Открытые вопросы (${cnt})</button>`;
-  }
   if(i<ord.length-1){const nx=ord[i+1];h+=`<button class="ghost" onclick="openDoc('${nx.type}','${nx.key}')">Дальше →</button>`;}
   return h;
 }
@@ -661,7 +660,7 @@ function openDoc(type,key){type==='sec'?openSection(key):openRef(key);}
 function openIntro(opts){
   curDoc='intro';
   if(!(opts&&opts.noHash)) setHash('#course');
-  const secNums=Object.keys(COURSE.sections);
+  const secNums=mainSecNums();
   const passed=secNums.filter(n=>secPassed(n)).length;
   const partsHtml=COURSE.parts.map((p,pi)=>{
     const desc=(COURSE.partsIntro||[])[pi]||'';
@@ -676,7 +675,7 @@ function openIntro(opts){
     <div class="rmeta">Курс</div>
     <h1 class="rt">Что тебя ждёт в курсе</h1>
     <div class="md">
-      <p><b>${secNums.length} разделов в шести частях</b> — от «что такое мессенджер с точки зрения архитектуры» до групповых звонков и их шифрования. Курс выстроен так, как развивается ответ на интервью: сначала скелет и доставка одного сообщения, потом хранение, масштаб, безопасность и реальное время. Каждый раздел опирается на предыдущие — читай по порядку.</p>
+      <p><b>${secNums.length} ${pluralSec(secNums.length)} в шести частях</b> плюс дополнения (2A, 3A, 6A, 8A) — от «что такое мессенджер с точки зрения архитектуры» до групповых звонков и их шифрования. Курс выстроен так, как развивается ответ на интервью: сначала скелет и доставка одного сообщения, потом хранение, масштаб, безопасность и реальное время. Каждый раздел опирается на предыдущие — читай по порядку.</p>
       <p><b>Как заниматься.</b> Прочитай раздел → сдай тест в конце на 6/6 (варианты перемешиваются, зубрить буквы бесполезно) → если завалила, карточки раздела сами встанут к повтору. Раз в пару разделов заглядывай в «Практика → Схема» — то, что прочитано, должно рисоваться рукой. Финальная проверка — «Практика → Прогон»: вся схема плюс вопросы вслух на время.</p>
       <p>Внизу оглавления лежит <b>справка по сетям</b> (TCP, сокеты, WebSocket, уровни L4/L7) — она не входит в зачёт, открывай её как словарик, когда встречаешь незнакомый термин.</p>
     </div>
@@ -798,7 +797,7 @@ let _timeAcc=+localStorage.getItem(BTIME)||0;
 setInterval(()=>{if(document.visibilityState==='visible'){_timeAcc+=10;localStorage.setItem(BTIME,_timeAcc);}},10000);
 
 function pillarStats(){
-  const secNums=Object.keys(COURSE.sections);
+  const secNums=mainSecNums();
   const totalSec=secNums.length;
   const passed=secNums.filter(n=>secPassed(n)).length;
   const courseKnow=totalSec?secNums.reduce((a,n)=>a+secFrac(n),0)/totalSec:0;
@@ -841,7 +840,7 @@ function renderLanding(box){
         <button class="primary" onclick="continueCourse()">Начать курс</button>
         <button class="ghosty" onclick="goTab('map')">Посмотреть карту</button>
       </div>
-      <div class="factrow"><span><b>${Object.keys(COURSE.sections).length}</b> разделов</span><span><b>${tests}</b> тестов</span><span><b>${window.MAPDATA.SCENARIOS.length}</b> сценариев на карте</span></div>
+      <div class="factrow"><span><b>${mainSecNums().length}</b> ${pluralSec(mainSecNums().length)}</span><span><b>${tests}</b> тестов</span><span><b>${window.MAPDATA.SCENARIOS.length}</b> сценариев на карте</span></div>
     </div>
     <div class="phone">
       <div class="blob" style="top:-50px;left:-70px;width:260px;height:260px;background:radial-gradient(circle,rgba(106,164,224,.14),transparent 70%);"></div>
@@ -856,7 +855,7 @@ function renderLanding(box){
   <div class="blocks3">
     <div class="b3">
       <h3>${icon('book',18)} Курс</h3>
-      <p>26 разделов — от «что такое мессенджер архитектурно» до E2EE и звонков. После каждого тест: раздел засчитан при 6 из 6.</p>
+      <p>22 раздела — от «что такое мессенджер архитектурно» до E2EE и звонков. После каждого тест: раздел засчитан при 6 из 6.</p>
       <button onclick="goTab('course')">Читать курс →</button>
     </div>
     <div class="b3">
@@ -930,10 +929,8 @@ function renderCabinet(box){
     <div class="pillars">${pillars}</div>
     <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:20px;">
       <button class="linkbtn" style="width:auto;padding:6px 12px;" onclick="exportProgress()">${icon('download',13)} Экспорт прогресса</button>
-      <button class="linkbtn" style="width:auto;padding:6px 12px;" onclick="document.getElementById('importFile').click()">${icon('upload',13)} Импорт прогресса</button>
       <button class="linkbtn" style="width:auto;padding:6px 12px;" onclick="resetAll()">${icon('rotate',13)} Сбросить весь прогресс</button>
-    </div>
-    <div class="landfoot">Обратная связь — <a href="https://t.me/monrech" target="_blank" rel="noopener">${icon('send',12)} @monrech</a></div>`;
+    </div>`;
 }
 function continueCourse(){
   goTab('course');
