@@ -19,20 +19,32 @@ function hashForDoc(doc){ // doc = 'intro' | 'sec:6A' | 'ref:ws'
   return doc.startsWith('ref:') ? '#course/ref/'+encodeURIComponent(doc.slice(4))
                                 : '#course/'+encodeURIComponent(doc.slice(4));
 }
+/* три раздела: Курс / Практика / Карта. Пять тренажёров живут внутри «Практики»;
+   старые имена вкладок (build, cards…) и хэши (#cards) продолжают работать. */
+const PRACTICE=['build','apidb','cards','estimate','interview'];
+let practiceMode=localStorage.getItem('msg_practice')||'build';
 function goTab(name,opts){
+  if(PRACTICE.includes(name)){practiceMode=name;localStorage.setItem('msg_practice',name);name='practice';}
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.view===name));
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   document.getElementById('view-'+name).classList.add('on');
-  if(name==='cards') renderCardsSide();
   if(name==='home') renderDashboard();
   if(name==='course'){renderToc();if(!curDoc)openIntro({noHash:true});}
-  if(name==='estimate') renderEstimate();
-  if(name==='interview') renderInterview();
-  if(name==='apidb') renderApiDb();
-  if(!(opts&&opts.noHash)) setHash(name==='course'?hashForDoc(curDoc):'#'+name);
+  if(name==='practice') showPractice();
+  if(!(opts&&opts.noHash)) setHash(name==='course'?hashForDoc(curDoc):(name==='practice'?'#practice/'+practiceMode:'#'+name));
   window.scrollTo(0,0);
 }
+function showPractice(){
+  document.querySelectorAll('#view-practice .pview').forEach(x=>x.classList.toggle('on',x.id==='view-'+practiceMode));
+  document.querySelectorAll('.pseg').forEach(b=>b.classList.toggle('on',b.dataset.p===practiceMode));
+  if(practiceMode==='cards') renderCardsSide();
+  if(practiceMode==='apidb') renderApiDb();
+  if(practiceMode==='estimate') renderEstimate();
+  if(practiceMode==='interview') renderInterview();
+}
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>goTab(t.dataset.view));
+document.querySelectorAll('.pseg').forEach(b=>b.onclick=()=>goTab(b.dataset.p));
+document.getElementById('brandHome').onclick=()=>goTab('home');
 function applyHash(){
   lastAppliedHash=location.hash;
   const h=location.hash.slice(1);
@@ -43,14 +55,45 @@ function applyHash(){
     if(parts[1]==='ref'&&parts[2]) openRef(parts[2],{noHash:true});
     else if(parts[1]) openSection(parts[1],{noHash:true});
     else openIntro({noHash:true}); // голый #course — вводная «что тебя ждёт»
-  } else if(['home','build','cards','map','estimate','interview','apidb'].includes(tab)) goTab(tab,{noHash:true});
+  } else if(tab==='practice') goTab(PRACTICE.includes(parts[1])?parts[1]:practiceMode,{noHash:true});
+  else if(PRACTICE.includes(tab)||['home','map'].includes(tab)) goTab(tab,{noHash:true});
   else goTab('home',{noHash:true});
 }
 window.addEventListener('hashchange',()=>{ if(location.hash!==lastAppliedHash) applyHash(); });
 
+/* ==================== ИКОНКИ (линейные SVG, как в макете) ==================== */
+const ICONS={
+  chat:'<path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.5L3 21l2-5.6A8.5 8.5 0 1 1 21 11.5Z"/>',
+  book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/>',
+  dumbbell:'<path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/>',
+  compass:'<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>',
+  blocks:'<rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/>',
+  cards:'<rect x="8" y="3" width="13" height="16" rx="2"/><path d="M16 21H5a2 2 0 0 1-2-2V8"/>',
+  mic:'<rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/><path d="M12 18v3.5"/>',
+  arrow:'<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  flame:'<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3 1.07-.4 2.5-1.5 2.5-4 2 1.5 4.5 4.46 4.5 8a5.5 5.5 0 1 1-11 0c0-1.5.5-3 1.5-4 0 2 1 3.5 1 5.5Z"/>',
+  checkc:'<circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 5-6"/>',
+  rotate:'<path d="M3 2v6h6"/><path d="M3.51 9a9 9 0 1 0 2.13-3.36L3 8"/>',
+  bulb:'<path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+  moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>',
+  play:'<path d="m7 4 13 8-13 8Z"/>',
+  pause:'<path d="M8 4v16M16 4v16"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 8 5-5 5 5"/><path d="M12 3v12"/>',
+};
+function icon(name,size=16){return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;">${ICONS[name]||''}</svg>`;}
+function initStaticIcons(){
+  document.getElementById('btnHint').innerHTML=icon('bulb',17);
+  document.getElementById('btnReset').innerHTML=icon('rotate',15);
+  document.getElementById('mReset').innerHTML=icon('rotate',15);
+  document.getElementById('mPlay').innerHTML=icon('play',12)+' Авто';
+}
+
 /* ==================== ТЕМА ==================== */
 const themeBtn=document.getElementById('themeBtn');
-function syncThemeBtn(){themeBtn.textContent=document.documentElement.dataset.theme==='dark'?'☀️':'🌙';}
+function syncThemeBtn(){themeBtn.innerHTML=icon(document.documentElement.dataset.theme==='dark'?'sun':'moon',17);}
 themeBtn.onclick=()=>{
   const t=document.documentElement.dataset.theme==='dark'?'light':'dark';
   document.documentElement.dataset.theme=t;localStorage.setItem('msg_theme',t);syncThemeBtn();
@@ -101,7 +144,7 @@ function renderLevels(){
   const sel=document.getElementById('lvlSelect');
   sel.innerHTML=LEVELS.map((lv,i)=>{
     const b=best[lv.id], done=b&&b.complete;
-    const mark=done?(b.hardClean?'🧠 ':(b.clean?'✨ ':'★ ')):'';
+    const mark=done?(b.hardClean?'★ ':(b.clean?'✦ ':'✓ ')):'';
     return `<option value="${i}"${i===curLevel?' selected':''}>${mark}${lv.name}</option>`;
   }).join('');
   document.getElementById('lvlDesc').textContent=LEVELS[curLevel].desc;
@@ -152,7 +195,7 @@ function renderSolved(best){
   updateScore(); renderLegend();
   document.getElementById('phaseTag').innerHTML='<span class="fnum">✓ Собрано</span> · уровень пройден';
   document.getElementById('paletteTitle').textContent='Готово';
-  levelDoneActions(`Уровень уже собран ✓ Лучший результат — ошибок: ${best.miss}${best.time?` · время ${fmtDur(best.time)}`:''}${best.clean?' · ✨':''}.`);
+  levelDoneActions(`Уровень уже собран ✓ Лучший результат — ошибок: ${best.miss}${best.time?` · время ${fmtDur(best.time)}`:''}${best.clean?' · ✦':''}.`);
   const bn=document.getElementById('doneBanner');
   bn.textContent=`✓ Уровень «${LEVELS[curLevel].name}» пройден. Можешь пройти заново или взять следующий уровень.`;
   bn.classList.add('show');
@@ -362,7 +405,7 @@ function checkLinksDone(){
     celebrate();
     const bn=document.getElementById('doneBanner');
     bn.textContent=`✓ Уровень «${LEVELS[curLevel].name}» собран за ${fmtDur(timeMs)} · ошибок: ${missCount}`
-      +(clean?' · чисто ✨':'')+(buildMode==='hard'?' · чистая доска 🧠':'');
+      +(clean?' · чисто ✦':'')+(buildMode==='hard'?' · чистая доска':'');
     bn.classList.add('show'); renderLevels();
     document.getElementById('phaseTag').innerHTML='<span class="fnum">✓ Собрано</span> · уровень пройден';
     document.getElementById('paletteTitle').textContent='Готово';
@@ -533,6 +576,7 @@ function grade(g){
 }
 /* клавиатура: пробел — показать ответ, 1–4 — оценка */
 document.addEventListener('keydown',e=>{
+  if(!document.getElementById('view-practice').classList.contains('on'))return;
   if(!document.getElementById('view-cards').classList.contains('on'))return;
   if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
   if(!queue.length||qPos>=queue.length)return;
@@ -564,7 +608,7 @@ function renderToc(){
   const toc=document.getElementById('toc');toc.innerHTML='';
   const ib=document.createElement('button');
   ib.className='ti'+(curDoc==='intro'?' on':'');
-  ib.innerHTML='<span class="n">🧭</span><span class="tt">О курсе · что тебя ждёт</span>';
+  ib.innerHTML='<span class="n" style="color:var(--edge);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg></span><span class="tt">О курсе · что тебя ждёт</span>';
   ib.onclick=()=>openIntro();
   toc.appendChild(ib);
   COURSE.parts.forEach(p=>{
@@ -607,7 +651,7 @@ function navButtons(key){
   h+='<span class="grow"></span>';
   if(key.startsWith('sec:')){
     const n=key.slice(4);const cnt=(window.QUESTIONS||[]).filter(c=>String(c.sec)===n).length;
-    if(cnt)h+=`<button class="ghost" onclick="studySection('${n}')">📝 Открытые вопросы (${cnt})</button>`;
+    if(cnt)h+=`<button class="ghost" onclick="studySection('${n}')">Открытые вопросы (${cnt})</button>`;
   }
   if(i<ord.length-1){const nx=ord[i+1];h+=`<button class="ghost" onclick="openDoc('${nx.type}','${nx.key}')">Дальше →</button>`;}
   return h;
@@ -632,7 +676,7 @@ function openIntro(opts){
     <h1 class="rt">Что тебя ждёт в курсе</h1>
     <div class="md">
       <p><b>${secNums.length} разделов в шести частях</b> — от «что такое мессенджер с точки зрения архитектуры» до групповых звонков и их шифрования. Курс выстроен так, как развивается ответ на интервью: сначала скелет и доставка одного сообщения, потом хранение, масштаб, безопасность и реальное время. Каждый раздел опирается на предыдущие — читай по порядку.</p>
-      <p><b>Как заниматься.</b> Прочитай раздел → сдай тест в конце на 6/6 (варианты перемешиваются, зубрить буквы бесполезно) → если завалила, карточки раздела сами встанут к повтору. Раз в пару разделов заглядывай в «🧩 Собери схему» — то, что прочитано, должно рисоваться рукой. Финальная проверка — «🎤 Прогон»: вся схема плюс вопросы вслух на время.</p>
+      <p><b>Как заниматься.</b> Прочитай раздел → сдай тест в конце на 6/6 (варианты перемешиваются, зубрить буквы бесполезно) → если завалила, карточки раздела сами встанут к повтору. Раз в пару разделов заглядывай в «Практика → Схема» — то, что прочитано, должно рисоваться рукой. Финальная проверка — «Практика → Прогон»: вся схема плюс вопросы вслух на время.</p>
       <p>Внизу оглавления лежит <b>справка по сетям</b> (TCP, сокеты, WebSocket, уровни L4/L7) — она не входит в зачёт, открывай её как словарик, когда встречаешь незнакомый термин.</p>
     </div>
     <div class="introprog"><div class="bar"><i style="width:${secNums.length?Math.round(passed/secNums.length*100):0}%"></i></div><span>${passed} / ${secNums.length} разделов пройдено</span></div>
@@ -766,7 +810,64 @@ function pillarStats(){
           cardsFrac:Q.length?mastery/Q.length:0,
           dueNow:idx.filter(isDue).length,seen:idx.filter(i=>!isNew(i)).length};
 }
+// реальный прогресс (не просто открытие сайта) переключает главную с лендинга на кабинет
+function hasProgress(){
+  return !!(localStorage.getItem(TST)||localStorage.getItem(SR)||localStorage.getItem(BSTORE)||localStorage.getItem(EST)||localStorage.getItem(ADS));
+}
 function renderDashboard(){
+  const box=document.getElementById('homeBox'); if(!box)return;
+  if(hasProgress())renderCabinet(box); else renderLanding(box);
+}
+function renderLanding(box){
+  const tests=Object.values(TESTS).reduce((a,t)=>a+t.length,0);
+  const seq=[
+    {dir:'in', t:'Спроектируй мессенджер на 500 млн DAU.', tm:'14:02'},
+    {dir:'out',t:'Начну с требований: доставка ≤ 1 с, строгий порядок в чате, мультидевайс.', tm:'14:03'},
+    {dir:'in', t:'А если получатель офлайн?', tm:'14:05'},
+    {dir:'out',t:'Сообщение ждёт в durable-логе, уходит push, при реконнекте — догон по курсору seq.', tm:'14:06'},
+  ];
+  const dbl='<svg width="13" height="9" viewBox="0 0 16 10" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5.5 4 8.5 10 1.5"/><path d="M7.5 7.5 8.5 8.5 15 1.5"/></svg>';
+  const msgs=seq.map((m,i)=>`<div class="ph-msg ${m.dir}" style="animation-delay:${(.35+i*.6).toFixed(2)}s">${m.t}<span class="mt">${m.tm}${m.dir==='out'?dbl:''}</span></div>`).join('');
+  box.innerHTML=`
+  <div class="landing">
+    <div>
+      <h2>Спроектируй мессенджер.<br>Пройди интервью <b>уверенно</b>.</h2>
+      <p class="sub">Курс по архитектуре мессенджера и пять тренажёров, которые учат не узнавать, а воспроизводить: схему — рукой, контракты — по памяти, ответы — вслух. Без регистрации; весь прогресс — у тебя в браузере.</p>
+      <div class="ctas">
+        <button class="primary" onclick="continueCourse()">Начать курс</button>
+        <button class="ghosty" onclick="goTab('map')">Посмотреть карту</button>
+      </div>
+      <div class="factrow"><span><b>${Object.keys(COURSE.sections).length}</b> разделов</span><span><b>${tests}</b> тестов</span><span><b>${Q.length}</b> карточек</span><span><b>${AD.API_TASKS.length}</b> API-задач</span><span><b>${window.MAPDATA.SCENARIOS.length}</b> сценариев</span></div>
+    </div>
+    <div class="phone">
+      <div class="blob" style="top:-50px;left:-70px;width:260px;height:260px;background:radial-gradient(circle,rgba(106,164,224,.14),transparent 70%);"></div>
+      <div class="ph-head"><span class="ph-ava"><i>SD</i></span><div><div class="nm">Интервьюер</div><div class="st">online</div></div></div>
+      <div class="ph-msgs">${msgs}
+        <div class="ph-typing" style="animation-delay:${(.35+seq.length*.6+.5).toFixed(2)}s"><i></i><i></i><i></i></div>
+      </div>
+      <div class="ph-input"><div class="fld">Сообщение…</div></div>
+    </div>
+  </div>
+  <div class="blocks3">
+    <div class="block3" onclick="goTab('course')">
+      <div class="bic">${icon('book',20)}</div><h3>Курс</h3>
+      <p>26 разделов — от «что такое мессенджер архитектурно» до E2EE и звонков. После каждого тест: раздел засчитан при 6 из 6.</p>
+      <span class="go">Читать курс ${icon('arrow',14)}</span>
+    </div>
+    <div class="block3" onclick="goTab('practice')">
+      <div class="bic">${icon('dumbbell',20)}</div><h3>Практика</h3>
+      <p>Пять тренажёров: собери схему по памяти, восстанови API и таблицы, карточки с интервальными повторами, прикидки и прогон интервью.</p>
+      <span class="go">Тренироваться ${icon('arrow',14)}</span>
+    </div>
+    <div class="block3" onclick="goTab('map')">
+      <div class="bic">${icon('compass',20)}</div><h3>Карта</h3>
+      <p>Живая схема системы: 21 компонент с объяснениями и 15 пошаговых сценариев — от доставки сообщения до группового звонка.</p>
+      <span class="go">Изучать карту ${icon('arrow',14)}</span>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:26px;"><button class="linkbtn" style="display:inline-block;width:auto;" onclick="document.getElementById('importFile').click()">У меня есть файл прогресса — импортировать</button></div>`;
+}
+function renderCabinet(box){
   markActive();
   const st=pillarStats();
   const readiness=Math.round(100*(0.35*st.courseKnow+0.30*st.buildFrac+0.35*st.cardsFrac));
@@ -775,39 +876,52 @@ function renderDashboard(){
   else if(readiness<55){label='Разогрев';sub='База набирается. Дожимай карточки на повторе и наращивай схему по уровням.';}
   else if(readiness<80){label='Уверенно';sub='Хорошая форма. Закрывай слабые разделы и гоняй полную схему без подсказок.';}
   else{label='Готова';sub='Ты почти у цели. Держи карточки на повторе и прогоняй сценарии звонков и E2EE на карте.';}
-  document.getElementById('hero').innerHTML=`
-    <div class="ring" style="--p:${readiness}"><div class="hole"><b>${readiness}</b><small>ГОТОВНОСТЬ</small></div></div>
-    <div class="meta">
-      <span class="lvlbadge">Уровень: ${label}</span>
-      <h2>Готовность к интервью</h2>
-      <p>${sub}</p>
-      <div style="margin-top:14px;"><button class="primary" onclick="goTab('interview')">🎤 Прогон интервью</button></div>
-    </div>`;
+  const nx=courseOrder().find(x=>x.type==='sec'&&!secPassed(x.key));
   const sd=streakDays();
-  document.getElementById('stats').innerHTML=[
-    {ic:'⏱',v:fmtTime(_timeAcc),l:'в тренажёре'},
-    {ic:'🔥',v:sd,l:pluralDay(sd)},
-    {ic:'✅',v:`${st.passed} / ${st.totalSec}`,l:'тестов сдано'},
-    {ic:'🔁',v:gradesCount(),l:'повторов карточек'},
-  ].map(s=>`<div class="stat-tile"><span class="ic">${s.ic}</span><span class="v">${s.v}</span><span class="l">${s.l}</span></div>`).join('');
+  const stats=[
+    {ic:'clock',v:fmtTime(_timeAcc),l:'в тренажёре'},
+    {ic:'flame',v:sd,l:pluralDay(sd)},
+    {ic:'checkc',v:`${st.passed} / ${st.totalSec}`,l:'тестов сдано'},
+    {ic:'rotate',v:gradesCount(),l:'повторов карточек'},
+  ].map(s=>`<div class="stat-tile"><span class="ic" style="color:var(--edge);">${icon(s.ic,19)}</span><span class="v">${s.v}</span><span class="l">${s.l}</span></div>`).join('');
   const courseDone=st.passed>=st.totalSec;
   const pillars=[
-    {cls:'k-course',ic:'📖',t:'Курс',frac:st.courseKnow,big:`<b>${st.passed}</b> / ${st.totalSec} разделов пройдено`,
+    {cls:'k-course',ic:'book',t:'Курс',frac:st.courseKnow,big:`<b>${st.passed}</b> / ${st.totalSec} разделов пройдено`,
      btn:courseDone?'Перечитать курс →':'Продолжить курс →',act:'continueCourse()',prim:!courseDone},
-    {cls:'k-build',ic:'🧩',t:'Схема',frac:st.buildFrac,big:`<b>${st.lvlsDone}</b> / ${LEVELS.length} уровней собрано`,
+    {cls:'k-build',ic:'blocks',t:'Схема',frac:st.buildFrac,big:`<b>${st.lvlsDone}</b> / ${LEVELS.length} уровней собрано`,
      btn:'Тренировать сборку →',act:"goTab('build')",prim:false},
-    {cls:'k-cards',ic:'🃏',t:'Карточки',frac:st.cardsFrac,
+    {cls:'k-cards',ic:'cards',t:'Карточки',frac:st.cardsFrac,
      big:st.dueNow?`<b>${st.dueNow}</b> к повтору · ${st.seen}/${Q.length} изучено`:`<b>${st.seen}</b> / ${Q.length} изучено`,
      btn:st.dueNow?`Повторить ${st.dueNow} →`:'Учить карточки →',act:'startCards()',prim:st.dueNow>0},
-  ];
-  document.getElementById('pillars').innerHTML=pillars.map(p=>`
+  ].map(p=>`
     <div class="pcard ${p.cls}">
-      <div class="ic">${p.ic}</div><h3>${p.t}</h3>
+      <div class="ic" style="color:var(--edge);">${icon(p.ic,22)}</div><h3>${p.t}</h3>
       <div class="big">${p.big}</div>
       <div class="bar"><i style="width:${Math.round(p.frac*100)}%"></i></div>
       <div class="spacer"></div>
       <button class="${p.prim?'primary':''}" onclick="${p.act}">${p.btn}</button>
     </div>`).join('');
+  box.innerHTML=`
+    <div class="hero" style="margin-bottom:14px;">
+      <div class="ring" style="--p:${readiness}"><div class="hole"><b>${readiness}</b><small>ГОТОВНОСТЬ</small></div></div>
+      <div class="meta">
+        <span class="lvlbadge">Уровень: ${label}</span>
+        <h2>С возвращением!</h2>
+        <p>${sub}</p>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+          ${nx?`<button class="primary" onclick="goTab('course');openSection('${nx.key}')">Продолжить курс · раздел ${nx.key}</button>`:`<button class="primary" onclick="goTab('course')">Перечитать курс</button>`}
+          ${st.dueNow?`<button onclick="startCards()">${icon('cards',14)} Повторить ${st.dueNow}</button>`:''}
+          <button onclick="goTab('interview')">${icon('mic',14)} Прогон интервью</button>
+        </div>
+      </div>
+    </div>
+    <div class="stats">${stats}</div>
+    <div class="pillars">${pillars}</div>
+    <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:20px;">
+      <button class="linkbtn" style="width:auto;padding:6px 12px;" onclick="exportProgress()">${icon('download',13)} Экспорт прогресса</button>
+      <button class="linkbtn" style="width:auto;padding:6px 12px;" onclick="document.getElementById('importFile').click()">${icon('upload',13)} Импорт прогресса</button>
+      <button class="linkbtn" style="width:auto;padding:6px 12px;" onclick="resetAll()">${icon('rotate',13)} Сбросить весь прогресс</button>
+    </div>`;
 }
 function continueCourse(){const nx=courseOrder().find(x=>x.type==='sec'&&!secPassed(x.key))||courseOrder()[0];goTab('course');openDoc(nx.type,nx.key);}
 function startCards(){goTab('cards');document.getElementById('btnStudy').click();}
@@ -1009,9 +1123,9 @@ function apiCheck(){
       <div class="adfacts">
         ${okMethod?'':`<div>✗ Метод: ты выбрала <b>${apiMethod}</b>, нужен <b>${t.method}</b></div>`}
         ${okPath?'':`<div>✗ ${apiMethod==='WS'?'Событие':'Путь'}: у тебя получилось «${built}»</div>`}
-        ${t.note?`<div>💡 ${t.note}</div>`:''}
-        ${t.event&&t.method!=='WS'?`<div>📡 Ручка тянет событие: по WS уходит <b>${t.event}</b></div>`:''}
-        ${t.tables?`<div>🗄 Трогает таблицы: <b>${t.tables.join(', ')}</b></div>`:''}
+        ${t.note?`<div>· ${t.note}</div>`:''}
+        ${t.event&&t.method!=='WS'?`<div>· Ручка тянет событие: по WS уходит <b>${t.event}</b></div>`:''}
+        ${t.tables?`<div>· Трогает таблицы: <b>${t.tables.join(', ')}</b></div>`:''}
       </div>
       <div class="acts" style="justify-content:flex-start;margin-top:12px;"><button class="primary" onclick="apiNext()">Дальше →</button></div>
     </div>`;
@@ -1077,7 +1191,7 @@ function dbBody(){
   return `<div class="qsummary ok" style="text-align:left;margin-top:4px;">
     <div class="big" style="font-size:20px;">✓ ${t.name} собрана · ошибок ${dbMiss}${best.miss!=null&&best.miss<dbMiss?` (лучший: ${best.miss})`:''}</div>
     <div class="adcanon">${t.schema}</div>
-    <div class="adfacts">${t.keys.map(k=>`<div>💡 ${k.why}</div>`).join('')}</div>
+    <div class="adfacts">${t.keys.map(k=>`<div>· ${k.why}</div>`).join('')}</div>
     <div class="acts" style="justify-content:flex-start;margin-top:12px;">
       <button class="primary" id="dbNextTable">Следующая таблица →</button>
       <button class="ghost" id="dbRedo">Эту заново</button></div></div>`;
@@ -1147,7 +1261,7 @@ function ivHead(){
   const lbl=IV.sub==='est'?'разминка':(IV.sub==='done'?'итог':`этап ${IV.stage+1} / ${IV.plan.length}`);
   const t=IV.sub==='done'?fmtDur(IV.tEnd-IV.t0):`<span id="ivTimer">${fmtDur(Date.now()-IV.t0)}</span>`;
   return `<div class="ivhead"><span class="lab">Прогон интервью · ${lbl}</span>
-    <span class="lab">⏱ ${t} · <button class="linkbtn" style="display:inline;width:auto;padding:0;" onclick="ivAbort()">прервать</button></span></div>`;
+    <span class="lab">${icon('clock',12)} ${t} · <button class="linkbtn" style="display:inline;width:auto;padding:0;" onclick="ivAbort()">прервать</button></span></div>`;
 }
 setInterval(()=>{const e=document.getElementById('ivTimer');if(e&&IV.active&&IV.sub!=='done')e.textContent=fmtDur(Date.now()-IV.t0);},1000);
 function renderInterview(){
@@ -1157,7 +1271,7 @@ function renderInterview(){
       <div class="lab">Прогон интервью</div>
       <h3>Репетиция «Спроектируй мессенджер»</h3>
       <p>Полный цикл, как на реальном интервью: <b>прикидка нагрузки → схема у доски → углубляющие вопросы вслух</b> — и так уровень за уровнем. Отвечай голосом, как живому интервьюеру: тренируется связная выдача, а не узнавание.</p>
-      <p style="margin-top:8px;">Совет: включи в сборке режим <b>🧠 Чистая доска</b> — сначала вспоминаешь состав уровня, потом расставляешь.</p>
+      <p style="margin-top:8px;">Совет: включи в сборке режим <b>«Чистая доска»</b> — сначала вспоминаешь состав уровня, потом расставляешь.</p>
       <div class="row" style="margin-top:16px;">
         <button class="primary" onclick="ivStart(false)">Полный прогон · ${LEVELS.length} уровней (~40 мин)</button>
         <button onclick="ivStart(true)">Короткий · первые 3 уровня (~15 мин)</button>
@@ -1204,14 +1318,14 @@ function renderInterview(){
   }
   // итог
   const bm=IV.res.builds.reduce((a,b)=>a+b.miss,0);
-  const buildRows=IV.res.builds.map(b=>`<div>· ${b.name} — ${fmtDur(b.time)}, ошибок ${b.miss}${b.clean?' ✨':''}</div>`).join('');
+  const buildRows=IV.res.builds.map(b=>`<div>· ${b.name} — ${fmtDur(b.time)}, ошибок ${b.miss}${b.clean?' ✦':''}</div>`).join('');
   const verdict=IV.res.again>IV.res.ok
     ?'Вопросы вслух — слабое звено: дожми карточки этих разделов, они уже поставлены к повтору.'
     :(bm>IV.res.builds.length*2
       ?'Схема ещё подвисает — гоняй уровни в режиме «чистая доска» до чистых прогонов.'
       :'Сильный прогон. Держи темп: повторы карточек + полная схема раз в пару дней.');
   box.innerHTML=`<div class="ivpanel">${ivHead()}
-    <h3>Прогон завершён 🎉</h3>
+    <h3>Прогон завершён</h3>
     <div class="pillrow" style="margin:12px 0;">
       <div class="pill"><b>${fmtDur(IV.tEnd-IV.t0)}</b>общее время</div>
       <div class="pill"><b>${bm}</b>ошибок в сборке</div>
@@ -1256,6 +1370,7 @@ function ivAbort(){if(confirm('Прервать прогон? Результат
 function ivFinish(){IV.active=false;renderInterview();}
 /* клавиатура в вопросах прогона: пробел — ответ, 1 — плавала, 2 — уверенно */
 document.addEventListener('keydown',e=>{
+  if(!document.getElementById('view-practice').classList.contains('on'))return;
   if(!document.getElementById('view-interview').classList.contains('on')||!IV.active||IV.sub!=='cards')return;
   if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
   if(!IV.revealed&&e.key===' '){e.preventDefault();ivReveal();}
@@ -1339,9 +1454,9 @@ document.addEventListener('keydown',e=>{
     capStep.textContent=`Шаг ${stepIdx+1} / ${steps.length}`;capText.textContent=st.cap;stepNo.textContent=`${stepIdx+1} / ${steps.length}`;
     btnPrev.disabled=stepIdx===0;btnNext.disabled=stepIdx===steps.length-1;
     [...dotsEl.children].forEach((d,i)=>d.className='dot'+(i===stepIdx?' on':(i<stepIdx?' done':'')));}
-  function stopAuto(){if(autoTimer){clearInterval(autoTimer);autoTimer=null;}btnPlay.textContent='▶ Авто';}
+  function stopAuto(){if(autoTimer){clearInterval(autoTimer);autoTimer=null;}btnPlay.innerHTML=icon('play',12)+' Авто';}
   function toggleAuto(){if(autoTimer){stopAuto();return;}if(!curScn)return;
-    if(stepIdx>=curScn.steps.length-1)stepIdx=0;renderStep();btnPlay.textContent='⏸ Пауза';
+    if(stepIdx>=curScn.steps.length-1)stepIdx=0;renderStep();btnPlay.innerHTML=icon('pause',12)+' Пауза';
     autoTimer=setInterval(()=>{if(stepIdx<curScn.steps.length-1){stepIdx++;renderStep();}else{stopAuto();}},2600);}
   btnNext.onclick=()=>{stopAuto();if(curScn&&stepIdx<curScn.steps.length-1){stepIdx++;renderStep();}};
   btnPrev.onclick=()=>{stopAuto();if(curScn&&stepIdx>0){stepIdx--;renderStep();}};
@@ -1357,5 +1472,5 @@ document.addEventListener('keydown',e=>{
 })();
 
 /* ==================== INIT ==================== */
-renderLevels(); startLevel(); renderCardsSide(); renderToc(); renderDashboard();
+initStaticIcons(); renderLevels(); startLevel(); renderCardsSide(); renderToc(); renderDashboard();
 applyHash();
